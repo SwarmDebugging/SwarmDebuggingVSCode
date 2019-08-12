@@ -41,6 +41,10 @@ export class RawDebugSession {
 	private _readyForBreakpoints = false;
 	private _capabilities: DebugProtocol.Capabilities;
 
+	//swarmdebug
+	private steppedIn = false;
+	private lastFunction: string;
+
 	// shutdown
 	private debugAdapterStopped = false;
 	private inShutdown = false;
@@ -616,7 +620,18 @@ export class RawDebugSession {
 			this.debugAdapter.sendRequest(command, args, (response: R) => {
 				if (response.success) {
 					//swarmdebug: the response.body contains the stackframes which contain the info
+					//sessionid si in args as well as command.
+					if(response.command === 'stepIn') {
+						this.steppedIn = true;
+					}
+					if(response.command === 'stackTrace' && this.steppedIn) {
+						var lastFunction = response.body.stackFrames[0].name;
+						this.steppedIn = false;
+					}
 					completeDispatch(response);
+					//When there's a stepIn command sent, the response doesn't contain much information, but on of the next command's
+					//name is "stackTrace" and it contains info on the next(I think) frame.
+					//I think we need to keep a variable to keep the last called function for the invocation table in swarmserver.
 				} else {
 					errorDispatch(response);
 				}
