@@ -1,8 +1,10 @@
+// tslint:disable-next-line: import-patterns
 import * as vscode from 'vscode';
+// tslint:disable-next-line: import-patterns
 import { request } from 'graphql-request';
-import { SERVERURL } from '../extension';
-import { Product, ProductQuickPickItem } from '../objects/product';
-import { Developer } from '../objects/developer';
+import { SERVERURL } from '../../swarmAdapter';
+import { Product, ProductQuickPickItem } from '../objects/Product';
+import { Developer } from '../objects/Developer';
 
 export class ProductService {
 
@@ -27,7 +29,7 @@ export class ProductService {
         }
         if(chosenProduct !== undefined){
 		    if (chosenProduct.productId !== undefined && chosenProduct.label !== undefined) {
-                return new Product(chosenProduct.productId, chosenProduct.label);
+                return new Product(chosenProduct.label, chosenProduct.productId);
 			    //return chosenProduct.productId; //label = ID
             }
         } else {
@@ -50,8 +52,8 @@ export class ProductService {
             developerId: currentUser.getID()
         };
 
-        var data = await request(SERVERURL, query, variables);
-        for (var i = 0; i < data.products.length; i++) {
+        let data = await request(SERVERURL, query, variables);
+        for (let i = 0; i < data.products.length; i++) {
             products.push({
                 label: data.products[i].name,
                 productId: data.products[i].id
@@ -70,14 +72,14 @@ export class ProductService {
             return -1;
         }
 
-        var productName: string | undefined = "";
-		while (productName === "") {
+        let productName: string | undefined = '';
+		while (productName === '') {
 			productName = await vscode.window.showInputBox({ prompt: 'Enter the product name' });
 		}
 		if(productName === undefined){
 			return -1;
         }
-        
+
         const productQuery = `mutation createProduct($productName: String!) {
 			productCreate(product: {
 				name: $productName
@@ -90,7 +92,7 @@ export class ProductService {
             productName: productName
         };
 
-        var productData = await request(SERVERURL, productQuery, productVariables);
+        let productData = await request(SERVERURL, productQuery, productVariables);
 
         //delete this task when a real task is entered to keep link between developer and product
         const taskQuery = `mutation taskCreate($productId: Long!) {
@@ -141,10 +143,10 @@ export class ProductService {
 
         //add sessionCreate verification?
         if (taskData.taskCreate.id) {
-            var sessionData = await request(SERVERURL, sessionQuery, sessionVariables);
+            let sessionData = await request(SERVERURL, sessionQuery, sessionVariables);
             if (sessionData.sessionStart.id && productData.productCreate.id) {
                 //return Number(productData.productCreate.id);
-                return new Product(productData.productCreate.id, productName);
+                return new Product(productName, productData.productCreate.id);
             }
         }
         return -1;

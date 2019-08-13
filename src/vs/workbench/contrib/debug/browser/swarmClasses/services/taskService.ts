@@ -1,9 +1,11 @@
+// tslint:disable-next-line: import-patterns
 import * as vscode from 'vscode';
+// tslint:disable-next-line: import-patterns
 import { request } from 'graphql-request';
-import { SERVERURL } from '../extension';
-import { Task } from '../objects/task';
-import { Developer } from '../objects/developer';
-import { Product } from 'objects/product';
+import { SERVERURL } from '../../swarmAdapter';
+import { Task } from '../objects/Task';
+import { Developer } from '../objects/Developer';
+import { Product } from '../objects/Product';
 
 export class TaskService {
 
@@ -19,7 +21,7 @@ export class TaskService {
 
     async updateTaskTitle(taskId: number): Promise<number> {
 
-        const title = await vscode.window.showInputBox({ prompt: "Enter new title for selected task" });
+        const title = await vscode.window.showInputBox({ prompt: 'Enter new title for selected task' });
 
         if (title === undefined) {
             return -1;
@@ -40,7 +42,10 @@ export class TaskService {
         };
 
         let data = await request(SERVERURL, query, variables);
-        return 1;
+        if(data){
+            return 1;
+        }
+        return -1;
     }
 
     async endTask(taskId: number) {
@@ -63,6 +68,7 @@ export class TaskService {
             vscode.window.showInformationMessage('Task marked as done');
             return taskId;
         }
+        return -1;
     }
 
     async createTask(currentUser: Developer, currentProduct: Product) {
@@ -74,9 +80,9 @@ export class TaskService {
             vscode.window.showInformationMessage('You must be logged in to create a new task');
             return -2;
         }
-    
-        var taskName: string | undefined = "";
-        while(taskName === "") {
+
+        let taskName: string | undefined = '';
+        while(taskName === '') {
             taskName = await vscode.window.showInputBox({ prompt: 'Enter the name of the new task' });
         }
 

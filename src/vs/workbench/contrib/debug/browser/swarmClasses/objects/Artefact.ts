@@ -1,9 +1,7 @@
-import * as vs from 'vscode';
-
 export class Artefact {
 
     private id: number = -1;
-    private source_code: string = "";
+    private source_code: string = '';
     private type_hash: number = -1; // Generated in the server
 
     constructor(source_code: string) {

@@ -1,12 +1,13 @@
+// tslint:disable-next-line: import-patterns
 import { request } from 'graphql-request';
-import { Breakpoint } from '../objects/breakpoint';
-import { Type } from '../objects/type';
-import { Artefact } from '../objects/artefact';
-import { Product } from '../objects/product';
-import { Task } from '../objects/task';
-import { Session } from '../objects/session';
-import { Developer } from '../objects/developer';
-import { SERVERURL } from '../extension';
+import { Breakpoint } from '../objects/Breakpoint';
+import { Type } from '../objects/Type';
+import { Artefact } from '../objects/Artefact';
+import { Product } from '../objects/Product';
+import { Task } from '../objects/Task';
+import { Session } from '../objects/Session';
+import { Developer } from '../objects/Developer';
+import { SERVERURL } from '../../swarmAdapter';
 
 export class BreakpointService {
 
@@ -25,7 +26,7 @@ export class BreakpointService {
         if (this.breakpoint) {
 
             const query = `mutation breakpointCreate(
-                $breakpointLineNumber: Int, 
+                $breakpointLineNumber: Int,
                 $typeId: Long) {
               breakpointCreate(breakpoint: {
                 lineNumber: $breakpointLineNumber,
@@ -42,7 +43,7 @@ export class BreakpointService {
                 typeId: this.breakpoint.getType().getID()
             };
 
-            var data = await request(SERVERURL, query, variables);
+            let data = await request(SERVERURL, query, variables);
             this.breakpoint.setID(data.breakpointCreate.id);
 
             return true;
@@ -100,9 +101,9 @@ export class BreakpointService {
             taskId: task.getID()
         };
 
-        var data = await request(SERVERURL, query, variables);
+        let data = await request(SERVERURL, query, variables);
 
-        var answer: Breakpoint[] = [];
+        let answer: Breakpoint[] = [];
         for (let i = 0; i < data.breakpoint.length; i++) {
 
             let tempArtefact = new Artefact(data.breakpoint[i].type.artefact.sourceCode);

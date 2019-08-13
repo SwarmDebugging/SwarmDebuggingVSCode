@@ -1,13 +1,12 @@
-import * as vs from 'vscode';
 import { Artefact } from './Artefact';
 import { Session } from './Session';
 
 export class Type {
 
     id: number = -1;
-    full_name: string = "";
-    full_path: string = "";
-    name: string = "";
+    full_name: string = '';
+    full_path: string = '';
+    name: string = '';
     artefact: Artefact;
     session: Session;
 

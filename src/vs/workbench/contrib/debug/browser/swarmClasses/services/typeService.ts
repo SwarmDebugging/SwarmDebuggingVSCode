@@ -1,11 +1,12 @@
+// tslint:disable-next-line: import-patterns
 import { request } from 'graphql-request';
-import { SERVERURL } from '../extension';
-import { Type } from '../objects/type';
-import { Artefact } from '../objects/artefact';
-import { Product } from '../objects/product';
-import { Task } from '../objects/task';
-import { Session } from '../objects/session';
-import { Developer } from '../objects/developer';
+import { SERVERURL } from '../../swarmAdapter';
+import { Type } from '../objects/Type';
+import { Artefact } from '../objects/Artefact';
+import { Product } from '../objects/Product';
+import { Task } from '../objects/Task';
+import { Session } from '../objects/Session';
+import { Developer } from '../objects/Developer';
 
 export class TypeService {
 
@@ -31,9 +32,9 @@ export class TypeService {
         if (this.type && this.artefact) {
 
             const query = `mutation typeCreate(
-                $typeName: String, 
-                $typeFullName: String, 
-                $typeFullPath: String, 
+                $typeName: String,
+                $typeFullName: String,
+                $typeFullPath: String,
                 $sessionId: Long,
                 $inputSource: String) {
                 typeCreate(typeWrapper: {
@@ -44,7 +45,7 @@ export class TypeService {
                     session:{
                     id: $sessionId
                     }
-                }, 
+                },
                 source: $inputSource
                 }) {
                 id
@@ -63,7 +64,7 @@ export class TypeService {
                 inputSource: this.artefact.getSourceCode()
             };
 
-            var data = await request(SERVERURL, query, variables);
+            let data = await request(SERVERURL, query, variables);
             this.type.setID(data.typeCreate.id);
             this.artefact.setID(data.typeCreate.artefact.id);
             this.artefact.setTypeHash(data.typeCreate.artefact.id);
@@ -122,11 +123,11 @@ export class TypeService {
             sessionId: session.getID()
         };
 
-        var data = await request(SERVERURL, query, variables);
+        let data = await request(SERVERURL, query, variables);
 
-        var answer: Type[] = [];
-        var i = 0;
-        for (let i = 0; i < data.types.length; i++) {
+        let answer: Type[] = [];
+        let i = 0;
+        for (i = 0; i < data.types.length; i++) {
 
             let tempArtefact = new Artefact(data.types[i].artefact.sourceCode);
             tempArtefact.setID(data.types[i].artefact.id);

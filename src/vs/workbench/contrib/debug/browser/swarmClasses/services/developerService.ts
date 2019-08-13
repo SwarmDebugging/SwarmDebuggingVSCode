@@ -1,8 +1,10 @@
+// tslint:disable-next-line: import-patterns
 import * as vscode from 'vscode';
+// tslint:disable-next-line: import-patterns
 import { request } from 'graphql-request';
-import { SERVERURL } from '../extension';
-import { Developer } from '../objects/developer';
-import { Product } from '../objects/product';
+import { SERVERURL } from '../../swarmAdapter';
+import { Developer } from '../objects/Developer';
+import { Product } from '../objects/Product';
 import { ProductService } from './productService';
 
 export class DeveloperService {
@@ -35,7 +37,7 @@ export class DeveloperService {
 			user: username
 		};
 
-		var data = await request(SERVERURL, query, variables);
+		let data = await request(SERVERURL, query, variables);
 		if (data.developer !== null && this.developer) {
 			this.developer.setUsername(username);
 			this.developer.setID(data.developer.id);
@@ -70,7 +72,7 @@ export class DeveloperService {
 			user: username
 		};
 
-		var data = await request(SERVERURL, query, variables);
+		let data = await request(SERVERURL, query, variables);
 		if (data.developer !== null && this.developer) {
 			this.developer.setUsername(username);
 			this.developer.setID(data.developerCreate.id);
@@ -107,10 +109,12 @@ export class DeveloperService {
 			}
 		}
 
-		let productService = new ProductService(new Product(-1, "name"));
+		let productService = new ProductService(new Product('name', -1));
 
 		if (this.developer) {
 			return await productService.chooseProduct(this.developer);
 		}
+
+		return -7;
 	}
 }

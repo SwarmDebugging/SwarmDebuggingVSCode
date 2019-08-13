@@ -1,4 +1,6 @@
+// tslint:disable-next-line: import-patterns
 import * as vs from 'vscode';
+// tslint:disable-next-line: import-patterns
 import * as fs from 'fs';
 import { Type } from './Type';
 

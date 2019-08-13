@@ -1,16 +1,14 @@
-import * as vscode from 'vscode';
-
 export class Developer {
 
     private id: number = - 1;
-    private color: string = ""; // Is it still used?
-    private name: string = "";
+    private color: string = ''; // Is it still used?
+    private username: string = '';
 
     constructor(color: string,
-        name: string) {
+        username: string) {
 
         this.color = color;
-        this.name = name;
+        this.username = name;
     }
 
     getID() {
@@ -29,12 +27,19 @@ export class Developer {
         this.color = color;
     }
 
-    getName() {
-        return this.name;
+    getUsername() {
+        return this.username;
     }
 
-    setName(name: string) {
-        this.name = name;
+    setUsername(name: string) {
+        this.username = name;
     }
 
+    isLoggedIn() {
+        if (this.id === 0 || this.username === '') {
+			return false;
+		} else {
+			return true;
+		}
+    }
 }

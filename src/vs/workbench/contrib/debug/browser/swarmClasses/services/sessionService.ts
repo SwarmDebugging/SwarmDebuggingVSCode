@@ -57,7 +57,7 @@ export class SessionService {
 
 		let answer: Session[] = [];
 		for (let i = 0; i < data.types.length; i++) {
-			let tempProduct = new Product(data.sessionsVscode[i].product.name);
+			let tempProduct = new Product(data.sessionsVscode[i].product.name, -1);
 			tempProduct.setID(data.sessionsVscode[i].product.id);
 
 			let tempTask = new Task(

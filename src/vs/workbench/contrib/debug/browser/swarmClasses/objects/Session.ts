@@ -111,6 +111,4 @@ export class Session {
     setVscodeSession(vscodeSession: string){
         this.vscodeSession = vscodeSession;
     }
-
-
 }
