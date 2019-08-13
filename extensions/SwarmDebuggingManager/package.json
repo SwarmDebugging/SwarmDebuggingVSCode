@@ -1,0 +1,186 @@
+{
+	"name": "swarm-debugging-manager",
+	"displayName": "Swarm Debugging Manager",
+	"description": "VS Code extension for managing Swarm Debugging accounts",
+	"version": "0.0.1",
+	"engines": {
+		"vscode": "^1.35.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"activationEvents": [
+		"onView:taskView"
+	],
+	"main": "./out/extension.js",
+	"contributes": {
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "SwarmDebugging",
+					"title": "Swarm Debugging Manager",
+					"icon": "media/ant.svg"
+				}
+			]
+		},
+		"views": {
+			"SwarmDebugging": [
+				{
+					"id": "taskView",
+					"name": "Tasks"
+				}
+			]
+		},
+		"commands": [
+			{
+				"command": "extension.swarm-debugging.open",
+				"title": "Open Swarm Debugging Account Manager"
+			},
+			{
+				"command": "extension.swarm-debugging.refreshTasks",
+				"title": "Refresh",
+				"icon": {
+					"light": "media/refresh-light.svg",
+					"dark": "media/refresh-dark.svg"
+				}
+			},
+			{
+				"command": "extension.swarm-debugging.login",
+				"title": "Login",
+				"icon": {
+					"light": "media/login-light.svg",
+					"dark": "media/login-dark.svg"
+				}
+			},
+			{
+				"command": "extension.swarm-debugging.logout",
+				"title": "Logout",
+				"icon": {
+					"light": "media/logout-light.svg",
+					"dark": "media/logout-dark.svg"
+				}
+			},
+			{
+				"command": "extension.swarm-debugging.createProduct",
+				"title": "Create a new product"
+			},
+			{
+				"command": "extension.swarm-debugging.createTask",
+				"title": "Create a new task"
+			},
+			{
+				"command": "extension.swarm-debugging.startSession",
+				"title": "Start a new debugging session",
+				"icon": {
+					"light": "media/play-button-light.png",
+					"dark": "media/play-button-dark.png"
+				}
+			},
+			{
+				"command": "extension.swarm-debugging.stopSession",
+				"title": "Stop currently active debugging session"
+			},
+			{
+				"command": "extension.swarm-debugging.endTask",
+				"title": "Mark as done",
+				"icon": {
+					"light": "media/check-mark-light.png",
+					"dark": "media/check-mark-dark.png"
+				}
+			},
+			{
+				"command": "extension.swarm-debugging.chooseProduct",
+				"title": "Choose product"
+			},
+			{
+				"command": "extension.swarm-debugging.updateTaskTitle",
+				"title": "Change task title",
+				"icon": {
+					"light": "media/edit-icon-light.png",
+					"dark": "media/edit-icon-dark.png"
+				}
+			},
+			{
+				"command": "extension.swarm-debugging.toggleBreakpoints",
+				"title": "Swarm Debugging: Toggle Breakpoints",
+				"icon": {
+					"light": "media/toggle-light.png",
+					"dark": "media/toggle-dark.png"
+				}
+			}
+		],
+		"menus": {
+			"view/title": [
+				{
+					"command": "extension.swarm-debugging.refreshTasks",
+					"when": "view == taskView",
+					"group": "navigation"
+				},
+				{
+					"command": "extension.swarm-debugging.login",
+					"when": "view == taskView",
+					"group": "navigation"
+				},
+				{
+					"command": "extension.swarm-debugging.logout",
+					"when": "view == taskView",
+					"group": "navigation"
+				},
+				{
+					"command": "extension.swarm-debugging.createProduct",
+					"when": "view == taskView"
+				},
+				{
+					"command": "extension.swarm-debugging.createTask",
+					"when": "view == taskView"
+				},
+				{
+					"command": "extension.swarm-debugging.stopSession",
+					"when": "view == taskView"
+				},
+				{
+					"command": "extension.swarm-debugging.chooseProduct",
+					"when": "view == taskView"
+				}
+			],
+			"view/item/context": [
+				{
+					"command": "extension.swarm-debugging.startSession",
+					"when": "view == taskView && viewItem == task",
+					"group": "inline"
+				},
+				{
+					"command": "extension.swarm-debugging.endTask",
+					"when": "view == taskView && viewItem == task",
+					"group": "inline"
+				},
+				{
+					"command": "extension.swarm-debugging.updateTaskTitle",
+					"when": "view == taskView && viewItem == task",
+					"group": "inline"
+				},
+				{
+					"command": "extension.swarm-debugging.toggleBreakpoints",
+					"when": "view == taskView && viewItem == task",
+					"group": "inline"
+				}
+			]
+		}
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -p ./",
+		"watch": "tsc -watch -p ./",
+		"postinstall": "node ./node_modules/vscode/bin/install",
+		"test": "npm run compile && node ./node_modules/vscode/bin/test"
+	},
+	"devDependencies": {
+		"typescript": "^3.3.1",
+		"vscode": "^1.1.28",
+		"tslint": "^5.12.1",
+		"@types/node": "^10.12.21",
+		"@types/mocha": "^2.2.42",
+		"graphql-request": "1.8.2",
+		"fs": "0.0.1-security"
+	}
+}
