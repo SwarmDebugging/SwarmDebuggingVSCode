@@ -7,29 +7,29 @@ export class Method {
 	type: Type;
 	signature: string;
 
-	constructor(name: string, type: Type, signature: string){
+	constructor(name: string, type: Type, signature: string) {
 		this.name = name;
 		this.type = type;
 		this.signature = signature;
 	}
 
-	getID(){
+	getID() {
 		return this.id;
 	}
 
-	setID(id: number){
+	setID(id: number) {
 		this.id = id;
 	}
 
-	getName(){
+	getName() {
 		return this.name;
 	}
 
-	getSignature(){
+	getSignature() {
 		return this.signature;
 	}
 
-	getType(){
+	getType() {
 		return this.type;
 	}
 

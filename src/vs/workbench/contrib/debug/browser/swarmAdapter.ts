@@ -15,7 +15,7 @@ export class SwarmAdapter {
 	private invoked: string;
 	private invoking: string;
 
-	constructor() {}
+	constructor() { }
 
 	async tryPersist(response: DebugProtocol.Response) {
 		if (response.command === 'stepIn') {
