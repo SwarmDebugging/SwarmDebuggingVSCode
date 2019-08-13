@@ -24,12 +24,14 @@ export class SwarmAdapter {
 
 		if (this.secondStackTrace && response.command === 'stackTrace') {
 			this.invoking = response.body.stackFrames[0].name;
-			// pegar session
+			// take session
 			let result = await this.swarmSessionService.getByVscodeId(this.vscodeSession);
 			if (result instanceof Session) {
 				this.swarmSession = result;
+			} else {
+				//we create a new swarmsession
 			}
-			// aqui vai salvar
+			// here we save
 			this.secondStackTrace = false;
 		}
 
