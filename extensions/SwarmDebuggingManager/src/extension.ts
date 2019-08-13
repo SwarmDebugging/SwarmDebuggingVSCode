@@ -86,6 +86,11 @@ export async function activate() {
 
 	vscode.commands.registerCommand('extension.swarm-debugging.startSession', async (task: TreeTask) => {
 
+		if (vscode.debug.activeDebugSession) {
+			vscode.window.showErrorMessage('You can not start a SwarmSession while a debugging session is already running');
+			return;
+		}
+
 		while(!sessionDescription){
 			var sessionDescription = await vscode.window.showInputBox({ prompt: 'Enter a description for the session you want to start' });
 		}

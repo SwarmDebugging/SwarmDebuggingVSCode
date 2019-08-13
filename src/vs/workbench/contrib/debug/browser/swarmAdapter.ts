@@ -1,5 +1,3 @@
-// tslint:disable-next-line: import-patterns
-import * as vscode from 'vscode';
 import { Session } from './swarmClasses/objects/Session';
 import { SessionService } from './swarmClasses/services/sessionService';
 
@@ -32,9 +30,9 @@ export class SwarmAdapter {
 			);
 			if (result instanceof Session) {
 				this.swarmSession = result;
-			} else {
-				vscode.window.showInformationMessage('No SwarmDebugging session active, it will not store the events or breakpoint infomration');
-			}
+			} //else {
+				// here should be vscode.window.showInformation() but it is not working
+			//}
 			// here we save
 			this.secondStackTrace = false;
 		}
