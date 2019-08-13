@@ -395,6 +395,7 @@ export class DebugSession implements IDebugSession {
 
 	stepIn(threadId: number): Promise<void> {
 		if (this.raw) {
+			this.raw.setSwarmSession(this.id); // swarmdebug
 			return this.raw.stepIn({ threadId }).then(() => undefined);
 		}
 		return Promise.reject(new Error('no debug adapter'));

@@ -1,7 +1,7 @@
 // tslint:disable-next-line: import-patterns
 import { request } from 'graphql-request';
 
-var currentSessionId = -1;
+let currentSessionId = -1;
 const SERVER_URL = 'http://localhost:8080/graphql?';
 
 class Invocation {
