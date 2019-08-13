@@ -30,10 +30,7 @@ export class SwarmAdapter {
 			);
 			if (result instanceof Session) {
 				this.swarmSession = result;
-			} //else {
-				// here should be vscode.window.showInformation() but it is not working
-			//}
-			// here we save
+			}
 			this.secondStackTrace = false;
 		}
 
