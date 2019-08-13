@@ -15,6 +15,8 @@ export class SessionService {
   }
 
   async stopSession() {
+
+
     if (this.session === undefined) {
       return;
     }

@@ -49,6 +49,9 @@ export async function activate() {
 	});
 
 	vscode.commands.registerCommand('extension.swarm-debugging.logout', () => {
+		if(vscode.debug.activeDebugSession !== undefined) {
+			return;
+		}
 		let res = currentlyActiveDeveloper.logout();
 		if(res > 0) {
 			if (currentlyActiveSession.getID() > 0) {
@@ -110,6 +113,10 @@ export async function activate() {
 	});
 
 	vscode.commands.registerCommand('extension.swarm-debugging.stopSession', () => {
+		if(vscode.debug.activeDebugSession !== undefined) {
+			vscode.window.showInformationMessage('Stop the current debug session before stopping a swarm debug session');
+			return;
+		}
 		sessionService.stopSession().then((res: number) => {
 			if (res > 0) {
 				clearSession();
