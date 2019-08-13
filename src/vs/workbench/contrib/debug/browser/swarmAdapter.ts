@@ -34,7 +34,7 @@ export class SwarmAdapter {
 		}
 
 		if (this.steppedIn) {
-			if (response.command === 'threads') {
+			if (response.command === 'threads') { //isn't this useless?
 				this.steppedIn = true;
 			} else if (response.command === 'stackTrace') {
 				this.invoked = response.body.stackFrames[0].name;
