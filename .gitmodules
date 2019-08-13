@@ -1,0 +1,3 @@
+[submodule "SwarmDebuggingManager"]
+	path = SwarmDebuggingManager
+	url = https://github.com/SwarmDebugging/SwarmDebuggingManager.git
