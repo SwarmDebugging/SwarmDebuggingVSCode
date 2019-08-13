@@ -187,7 +187,7 @@ export async function activate() {
 			// The logic is simple, compare all the past and present breakpoints,
 			// find which ones are new and them add them to the database
 			// There are some special treatment for the firstime, because in the
-			// first time the past state is equivalent to the breakpoints from 
+			// first time the past state is equivalent to the breakpoints from
 			// the database(Breakpoint not vscode.Breakpoint)
 			for (var i = 0; i < allBreakpointsActual.length; i++) {
 				shouldCreateBreakpoint = true;
@@ -365,3 +365,4 @@ async function toggleBreakpoints(task: Task) {
 
 	return true;
 }
+//
