@@ -22,7 +22,7 @@ export class SessionService {
 			return;
 		}
 
-		const query = `query sessionsVscode($sessionId: string){
+		const query = `query sessionsVscode($sessionId: String){
 			sessionsVscode(vscodeSession: $sessionId) {
 				id
 				description
@@ -56,7 +56,7 @@ export class SessionService {
 		let data = await request(SERVERURL, query, variables);
 
 		let answer: Session[] = [];
-		for (let i = 0; i < data.types.length; i++) {
+		for (let i = 0; i < data.sessionsVscode.length; i++) {
 			let tempProduct = new Product(data.sessionsVscode[i].product.name, -1);
 			tempProduct.setID(data.sessionsVscode[i].product.id);
 
