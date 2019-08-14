@@ -6,7 +6,9 @@ import { Type } from './swarmClasses/objects/Type';
 import { SessionService } from './swarmClasses/services/sessionService';
 import { TypeService } from './swarmClasses/services/typeService';
 import { MethodService } from './swarmClasses/services/methodService';
-import { Method } from 'vs/workbench/contrib/debug/browser/swarmClasses/objects/Method';
+import { Method } from './swarmClasses/objects/Method';
+import { Event } from './swarmClasses/objects/Event';
+import { EventService } from 'vs/workbench/contrib/debug/browser/swarmClasses/services/eventService';
 
 export const SERVERURL = 'http://localhost:8080/graphql?';
 
@@ -18,20 +20,29 @@ export class SwarmAdapter {
 
 	// Data to persist
 	private vscodeSession: string;
-	private swarmSession: Session;
-	private swarmMethodInvoking: Method;
-	private swarmTypeInvoking: Type;
-	private swarmArtefactInvoking: Artefact;
-	private swarmMethodInvoked: Method;
-	private swarmTypeInvoked: Type;
-	private swarmArtefactInvoked: Artefact;
-	private swarmSessionService: SessionService = new SessionService();
-	private swarmTypeService: TypeService = new TypeService();
-	private swarmMethodService: MethodService = new MethodService();
 	private invoked: string;
 	private invoking: string;
 	private rootPathInvoking: string;
 	private rootPathInvoked: string;
+	private eventKind: string;
+
+	private swarmSession: Session;
+	private swarmEvent: Event;
+
+	private swarmMethodInvoking: Method;
+	private swarmTypeInvoking: Type;
+	private swarmArtefactInvoking: Artefact;
+
+	private swarmMethodInvoked: Method;
+	private swarmTypeInvoked: Type;
+	private swarmArtefactInvoked: Artefact;
+
+	private swarmSessionService: SessionService = new SessionService();
+	private swarmTypeService: TypeService = new TypeService();
+	private swarmMethodService: MethodService = new MethodService();
+	private swarmEventService: EventService = new EventService();
+
+
 
 	constructor() { }
 
@@ -39,19 +50,17 @@ export class SwarmAdapter {
 
 		if (response.command === 'variables' && this.workspace === false) {
 			this.rootPathInvoking = response.body.variables[1].value;
-			this.rootPathInvoking = this.rootPathInvoking.slice(1, this.rootPathInvoking.length-1);
+			this.rootPathInvoking = this.rootPathInvoking.slice(1, this.rootPathInvoking.length - 1);
 			this.workspace = true;
 		}
 
 		if (response.command === 'stepIn') {
 			this.steppedIn = true;
+			this.eventKind = 'stepIn';
 		}
 
 		if (this.secondStackTrace && response.command === 'stackTrace') {
 
-			let a = response;
-
-			// take session
 			let result = await this.swarmSessionService.getByVscodeId(
 				this.vscodeSession
 			);
@@ -92,7 +101,25 @@ export class SwarmAdapter {
 					this.invoking,
 					this.swarmTypeInvoking);
 				this.swarmMethodService.setMethod(this.swarmMethodInvoking);
-				this.swarmMethodService.create();
+				await this.swarmMethodService.create();
+
+				this.swarmEvent = new Event(
+					this.swarmMethodInvoking,
+					this.swarmSession,
+					response.body.stackFrames[0].line,
+					this.eventKind
+				);
+				this.swarmEventService.setEvent(this.swarmEvent);
+				await this.swarmEventService.create();
+
+
+
+				this.swarmMethodInvoked = new Method(
+					this.invoked,
+					this.swarmTypeInvoking);
+				this.swarmMethodService.setMethod(this.swarmMethodInvoking);
+				await this.swarmMethodService.create();
+
 
 			}
 			this.secondStackTrace = false;
@@ -100,6 +127,8 @@ export class SwarmAdapter {
 
 		if (this.steppedIn && response.command === 'stackTrace') {
 			this.invoked = response.body.stackFrames[0].name;
+			// TO DO: Find the rigth path to access the file for the reading
+			this.swarmArtefactInvoked = new Artefact(fs.readFileSync(response.body.stackFrames[0].source.path, 'utf8'));
 			this.steppedIn = false;
 			this.secondStackTrace = true;
 		}

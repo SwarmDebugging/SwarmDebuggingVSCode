@@ -19,7 +19,7 @@ export class EventService {
 			const query = `
 			mutation eventCreate(
 				$sessionId: Long,
-				$eventLineNumber: Long,
+				$eventLineNumber: Int,
 				$eventKind: String,
 				$methodId: Long
 			){
