@@ -9,6 +9,8 @@ import { MethodService } from './swarmClasses/services/methodService';
 import { Method } from './swarmClasses/objects/Method';
 import { Event } from './swarmClasses/objects/Event';
 import { EventService } from 'vs/workbench/contrib/debug/browser/swarmClasses/services/eventService';
+import { InvocationService } from 'vs/workbench/contrib/debug/browser/swarmClasses/services/invocationService';
+import { Invocation } from 'vs/workbench/contrib/debug/browser/swarmClasses/objects/Invocation';
 
 export const SERVERURL = 'http://localhost:8080/graphql?';
 
@@ -37,10 +39,13 @@ export class SwarmAdapter {
 	private swarmTypeInvoked: Type;
 	private swarmArtefactInvoked: Artefact;
 
+	private swarmInvocation: Invocation;
+
 	private swarmSessionService: SessionService = new SessionService();
 	private swarmTypeService: TypeService = new TypeService();
 	private swarmMethodService: MethodService = new MethodService();
 	private swarmEventService: EventService = new EventService();
+	private swarmInvocationService: InvocationService = new InvocationService();
 
 
 
@@ -69,7 +74,12 @@ export class SwarmAdapter {
 
 				this.invoking = response.body.stackFrames[0].name;
 
-				this.swarmArtefactInvoking = new Artefact(fs.readFileSync(response.body.stackFrames[0].source.path, 'utf8'));
+				try {
+					this.swarmArtefactInvoking = new Artefact(fs.readFileSync(response.body.stackFrames[0].source.path, 'utf8'));//error here
+				} catch(error){
+					this.swarmArtefactInvoking = new Artefact('');
+					console.log(error);
+				}
 
 				this.swarmTypeInvoking = new Type(
 					getTypeFullname(this.rootPathInvoking, response.body.stackFrames[0].source.path),
@@ -93,7 +103,7 @@ export class SwarmAdapter {
 					this.swarmTypeService.setType(this.swarmTypeInvoking);
 					let response = await this.swarmTypeService.create();
 					if (response) {
-						createdTypes[createdTypes.length - 1] = this.swarmTypeInvoking;
+						createdTypes[createdTypes.length] = this.swarmTypeInvoking;
 					}
 				}
 
@@ -117,9 +127,12 @@ export class SwarmAdapter {
 				this.swarmMethodInvoked = new Method(
 					this.invoked,
 					this.swarmTypeInvoking);
-				this.swarmMethodService.setMethod(this.swarmMethodInvoking);
+				this.swarmMethodService.setMethod(this.swarmMethodInvoked);
 				await this.swarmMethodService.create();
 
+				this.swarmInvocation = new Invocation(this.swarmMethodInvoking, this.swarmMethodInvoked, this.swarmSession);
+				this.swarmInvocationService.setInvocation(this.swarmInvocation);
+				this.swarmInvocationService.create();
 
 			}
 			this.secondStackTrace = false;
@@ -127,12 +140,15 @@ export class SwarmAdapter {
 
 		if (this.steppedIn && response.command === 'stackTrace') {
 			this.invoked = response.body.stackFrames[0].name;
-			// TO DO: Find the rigth path to access the file for the reading
-			this.swarmArtefactInvoked = new Artefact(fs.readFileSync(response.body.stackFrames[0].source.path, 'utf8'));
-			this.steppedIn = false;
+			// TO DO: Find the right path to access the file for the reading
+			try {
+				this.swarmArtefactInvoking = new Artefact(fs.readFileSync(response.body.stackFrames[0].source.path, 'utf8'));//error here
+			} catch(error){
+				this.swarmArtefactInvoking = new Artefact('');
+				console.log(error);
+			}			this.steppedIn = false;
 			this.secondStackTrace = true;
 		}
-
 	}
 
 	setSession(vscodeSessionId: string) {

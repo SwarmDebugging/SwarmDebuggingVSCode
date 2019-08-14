@@ -1,4 +1,5 @@
 import { Method } from '../objects/Method';
+import { Session } from 'vs/workbench/contrib/debug/browser/swarmClasses/objects/Session';
 
 export class Invocation {
 

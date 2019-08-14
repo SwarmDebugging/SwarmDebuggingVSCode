@@ -17,20 +17,20 @@ export class InvocationService {
 	async create() {
 		if (this.invocation) {
 			const query = `
-			mutation invocationCrea(
+			mutation invocationCreate(
 				$invokedID: Long,
 				$invokingID: Long,
 				$sessionID: Long,
 			){
 				invocationCreate(
 				  invocation: {
-					virtual: true
+					virtual: false
 					invoked: {
-					  id: $invokedID: Long,
-					},
+					  id: $invokedID,
+					}
 					invoking:{
-					  id: $invokingID: Long,
-					},
+					  id: $invokingID,
+					}
 					session:{
 					  id: $sessionID
 					}
@@ -46,7 +46,7 @@ export class InvocationService {
 			};
 
 			let data = await request(SERVERURL, query, variables);
-			this.invocation.setID(data.eventCreate.id);
+			this.invocation.setID(data.invocationCreate.id);
 
 			return true;
 		} else {
