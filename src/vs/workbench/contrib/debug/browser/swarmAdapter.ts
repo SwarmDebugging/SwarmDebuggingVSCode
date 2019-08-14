@@ -19,6 +19,10 @@ export class SwarmAdapter {
 	private steppedIn: boolean = false;
 	private secondStackTrace: boolean = false;
 	private workspace: boolean = false;
+	private steppedOut: boolean = false;
+	private lastSteppedInMethod: Method;
+	private lastSteppedInType: Type;
+	private lastSteppedInEvent: Event;
 
 	// Data to persist
 	private vscodeSession: string;
@@ -63,6 +67,40 @@ export class SwarmAdapter {
 			this.steppedIn = true;
 			this.eventKind = 'stepIn';
 		}
+
+		if (response.command === 'stepOut') {
+			//this.steppedOut = true;
+			this.eventKind = 'stepOut';
+
+
+			this.swarmEventService.setEvent(new Event(this.lastSteppedInMethod,
+				 this.swarmSession,
+				this.lastSteppedInEvent.getLineNumber(),
+				 this.eventKind));
+			await this.swarmEventService.create();
+
+			/*this.swarmMethodService.setMethod(this.lastSteppedInMethod);
+			await this.swarmMethodService.create();*/
+
+		}
+
+		/*if (response.command === 'stackTrace' && this.steppedOut) {
+
+			let result = await this.swarmSessionService.getByVscodeId(
+				this.vscodeSession
+			);
+			if (result instanceof Session && this.lastSteppedInMethod && this.lastSteppedInType) {
+
+				this.swarmSession = result;
+
+
+
+
+
+
+			}
+			this.steppedOut = false;
+		}*/
 
 		if (this.secondStackTrace && response.command === 'stackTrace') {
 
@@ -115,27 +153,30 @@ export class SwarmAdapter {
 				this.swarmMethodService.setMethod(this.swarmMethodInvoking);
 				await this.swarmMethodService.create();
 
-				this.swarmEvent = new Event(
-					this.swarmMethodInvoking,
-					this.swarmSession,
-					response.body.stackFrames[0].line,
-					this.eventKind
-				);
-				this.swarmEventService.setEvent(this.swarmEvent);
-				await this.swarmEventService.create();
-
-
-
 				this.swarmMethodInvoked = new Method(
 					this.invoked,
 					this.swarmTypeInvoking);
 				this.swarmMethodService.setMethod(this.swarmMethodInvoked);
 				await this.swarmMethodService.create();
 
+				let event = new Event(
+					//invoked or invoking?
+					this.swarmMethodInvoked,
+					this.swarmSession,
+					response.body.stackFrames[0].line,
+					this.eventKind
+				);
+				this.swarmEvent = event;
+				this.swarmEventService.setEvent(this.swarmEvent);
+				await this.swarmEventService.create();
+
 				this.swarmInvocation = new Invocation(this.swarmMethodInvoking, this.swarmMethodInvoked, this.swarmSession);
 				this.swarmInvocationService.setInvocation(this.swarmInvocation);
 				this.swarmInvocationService.create();
 
+				this.lastSteppedInMethod = this.swarmMethodInvoked;
+				this.lastSteppedInType = this.swarmTypeInvoked;
+				this.lastSteppedInEvent = event;
 			}
 			this.secondStackTrace = false;
 		}
