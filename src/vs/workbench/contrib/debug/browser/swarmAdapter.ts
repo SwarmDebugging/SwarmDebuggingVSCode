@@ -74,12 +74,14 @@ export class SwarmAdapter {
 
 				this.invoking = response.body.stackFrames[0].name;
 
+				let artefact;
 				try {
-					this.swarmArtefactInvoking = new Artefact(fs.readFileSync(response.body.stackFrames[0].source.path, 'utf8'));//error here
+					artefact = await fs.readFileSync(response.body.stackFrames[0].source.path, 'utf8');//error here
 				} catch(error){
-					this.swarmArtefactInvoking = new Artefact('');
+					artefact = await '***' + response.body.stackFrames[0].source.origin + '***';
 					console.log(error);
 				}
+				this.swarmArtefactInvoking = new Artefact(artefact);
 
 				this.swarmTypeInvoking = new Type(
 					getTypeFullname(this.rootPathInvoking, response.body.stackFrames[0].source.path),
@@ -141,12 +143,15 @@ export class SwarmAdapter {
 		if (this.steppedIn && response.command === 'stackTrace') {
 			this.invoked = response.body.stackFrames[0].name;
 			// TO DO: Find the right path to access the file for the reading
+			let artefact;
 			try {
-				this.swarmArtefactInvoking = new Artefact(fs.readFileSync(response.body.stackFrames[0].source.path, 'utf8'));//error here
+				artefact = await fs.readFileSync(response.body.stackFrames[0].source.path, 'utf8');//error here
 			} catch(error){
-				this.swarmArtefactInvoking = new Artefact('');
+				artefact = await '***' + response.body.stackFrames[0].source.origin + '***';
 				console.log(error);
-			}			this.steppedIn = false;
+			}
+			this.swarmArtefactInvoking = new Artefact(artefact);
+			this.steppedIn = false;
 			this.secondStackTrace = true;
 		}
 	}
