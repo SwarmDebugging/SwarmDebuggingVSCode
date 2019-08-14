@@ -10,7 +10,7 @@ export class MethodService {
 		this.method = method;
 	}
 
-	setProduct(method: Method) {
+	setMethod(method: Method) {
 		this.method = method;
 	}
 
@@ -19,13 +19,11 @@ export class MethodService {
 			const query = `
 			mutation methodCreate(
 				$methodName: String,
-				$methodSignature: String,
 				$typeId: Long
 			){
 				methodCreate(
 				  method:{
 					name: $methodName
-					signature: $methodSignature
 					type: {
 					  id: $typeId
 					}
@@ -36,8 +34,7 @@ export class MethodService {
 
 			const variables = {
 				methodName: this.method.getName(),
-				methodSignature: this.method.getSignature(),
-				typeId: this.method.getType()
+				typeId: this.method.getType().getID()
 			};
 
 			let data = await request(SERVERURL, query, variables);

@@ -16,10 +16,10 @@ import { TypeService } from './services/typeService';
 
 export const SERVERURL = 'http://localhost:8080/graphql?';
 
-var currentlyActiveProduct: Product = new Product(0, "");
-var currentlyActiveTask: Task = new Task("", "", "", currentlyActiveProduct);
+var currentlyActiveProduct: Product = new Product(0, '');
+var currentlyActiveTask: Task = new Task('', '', '', currentlyActiveProduct);
 var currentlyActiveDeveloper: Developer = new Developer(0, '');
-var currentlyActiveSession: Session = new Session("", new Date(), "", "", "", currentlyActiveDeveloper, currentlyActiveTask);
+var currentlyActiveSession: Session = new Session('', new Date(), '', '', '', currentlyActiveDeveloper, currentlyActiveTask);
 
 var sessionService = new SessionService(currentlyActiveSession);
 var productService = new ProductService(currentlyActiveProduct);
@@ -37,10 +37,10 @@ export async function activate() {
 
 	vscode.commands.registerCommand('extension.swarm-debugging.login', () => {
 		currentlyActiveDeveloper.login().then(res => {
-			if (res === undefined || typeof res === "number") {
+			if (res === undefined || typeof res === 'number') {
 				return res;
 			}
-			else if (typeof res === "object") {
+			else if (typeof res === 'object') {
 				currentlyActiveProduct.setID(res.getID());
 				currentlyActiveProduct.setName(res.getName());
 				taskProvider.updateProductId(currentlyActiveProduct.getID());
@@ -64,9 +64,9 @@ export async function activate() {
 
 	vscode.commands.registerCommand('extension.swarm-debugging.createProduct', async () => {
 		productService.createProduct(currentlyActiveDeveloper).then((res) => {
-			if(typeof res === "number"){
+			if(typeof res === 'number'){
 				return;
-			}else if (typeof res === "object") {
+			}else if (typeof res === 'object') {
 				currentlyActiveProduct.setID(res.getID());
 				currentlyActiveProduct.setName(res.getName());
 				taskProvider.updateProductId(currentlyActiveProduct.getID());
@@ -102,9 +102,9 @@ export async function activate() {
 
 		currentlyActiveSession = new Session(sessionDescription,
 			new Date(),
-			"",
-			"",
-			"",
+			'',
+			'',
+			'',
 			currentlyActiveDeveloper,
 			currentlyActiveTask);
 
@@ -143,10 +143,10 @@ export async function activate() {
 			vscode.window.showInformationMessage('You must be logged in to choose a product');
 		} else {
 			productService.chooseProduct(currentlyActiveDeveloper).then((res) => {
-				if (res === undefined || typeof res === "number") {
+				if (res === undefined || typeof res === 'number') {
 					return res;
 				}
-				if (typeof res === "object") {
+				if (typeof res === 'object') {
 					currentlyActiveProduct.setID(res.getID());
 					currentlyActiveProduct.setName(res.getName());
 					taskProvider.updateProductId(currentlyActiveProduct.getID());
@@ -224,7 +224,7 @@ export async function activate() {
 
 					let swarmArtefact = new Artefact(fs.readFileSync(breakpoint.location.uri.fsPath, 'utf8'));
 
-					let fullname: string = "";
+					let fullname: string = '';
 					if (vscode.workspace.rootPath) {
 						fullname = getTypeFullname(vscode.workspace.rootPath, breakpoint.location.uri.fsPath);
 					}
@@ -260,7 +260,7 @@ export async function activate() {
 					let response = await breakpointService.create();
 
 					if (response) {
-						console.log("Breakpoint added!");
+						console.log('Breakpoint added!');
 					}
 
 				}
@@ -302,10 +302,10 @@ export function deactivate() {
 }
 
 function clearSet() {
-	currentlyActiveProduct = new Product(0, "");
-	currentlyActiveTask = new Task("", "", "", currentlyActiveProduct);
+	currentlyActiveProduct = new Product(0, '');
+	currentlyActiveTask = new Task('', '', '', currentlyActiveProduct);
 	currentlyActiveDeveloper = new Developer(0, '');
-	currentlyActiveSession = new Session("", new Date(), "", "", "", currentlyActiveDeveloper, currentlyActiveTask);
+	currentlyActiveSession = new Session('', new Date(), '', '', '', currentlyActiveDeveloper, currentlyActiveTask);
 
 	sessionService = new SessionService(currentlyActiveSession);
  	productService = new ProductService(currentlyActiveProduct);
@@ -313,29 +313,29 @@ function clearSet() {
 }
 
 function clearSession() {
-	currentlyActiveSession = new Session("", new Date(), "", "", "", currentlyActiveDeveloper, currentlyActiveTask);
+	currentlyActiveSession = new Session('', new Date(), '', '', '', currentlyActiveDeveloper, currentlyActiveTask);
 	sessionService.setSession(currentlyActiveSession);
 }
 
 function fromPathToTypeName(path: string) {
 
-	let splittedPath = path.split("/");
+	let splittedPath = path.split('/');
 
-	return splittedPath[splittedPath.length - 1].split(".", 1)[0];
+	return splittedPath[splittedPath.length - 1].split('.', 1)[0];
 
 }
 
 function getTypeFullname(rootPath: string, filePath: string) {
 
-	let splittedRootPath = rootPath.split("/");
-	let splittedFilePath = filePath.split("/");
+	let splittedRootPath = rootPath.split('/');
+	let splittedFilePath = filePath.split('/');
 
-	let fullname = "";
+	let fullname = '';
 	for (let i = splittedRootPath.length + 1; i < splittedFilePath.length; i++) {
 		if (i === splittedRootPath.length + 1) {
 			fullname = splittedFilePath[i];
 		} else {
-			fullname = fullname + "." + splittedFilePath[i];
+			fullname = fullname + '.' + splittedFilePath[i];
 		}
 	}
 
@@ -352,9 +352,9 @@ async function toggleBreakpoints(task: Task) {
 
 	for (var i = 0; i < allBreakpointsPast.length; i++) {
 
-		let artefactSourceLines = allBreakpointsPast[i].getType().getArtefact().getSourceCode().split("\n");
+		let artefactSourceLines = allBreakpointsPast[i].getType().getArtefact().getSourceCode().split('\n');
 		let actualFile = fs.readFileSync(allBreakpointsPast[i].getType().getFullPath(), 'utf8');
-		let actualSourceLines = actualFile.split("\n");
+		let actualSourceLines = actualFile.split('\n');
 
 		let oldLine = artefactSourceLines[allBreakpointsPast[i].getLineNumber()];
 		let actualLine = actualSourceLines[allBreakpointsPast[i].getLineNumber()];
@@ -362,7 +362,7 @@ async function toggleBreakpoints(task: Task) {
 		if (oldLine === actualLine) {
 
 			//@ts-ignore
-			let uri = new vscode.Uri("file", "", allBreakpointsPast[i].getType().getFullPath(), "", "");
+			let uri = new vscode.Uri('file', '', allBreakpointsPast[i].getType().getFullPath(), '', '');
 			let range = new vscode.Range(allBreakpointsPast[i].getLineNumber(), 0, allBreakpointsPast[i].getLineNumber(), 0);
 			let location = new vscode.Location(uri, range);
 			let breakpointVS = new vscode.SourceBreakpoint(location, true);

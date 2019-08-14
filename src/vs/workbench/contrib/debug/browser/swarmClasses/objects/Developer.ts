@@ -8,7 +8,7 @@ export class Developer {
         username: string) {
 
         this.color = color;
-        this.username = name;
+        this.username = username;
     }
 
     getID() {

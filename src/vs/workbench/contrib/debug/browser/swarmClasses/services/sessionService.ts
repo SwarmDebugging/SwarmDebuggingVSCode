@@ -70,7 +70,7 @@ export class SessionService {
 
 			let tempDeveloper = new Developer(
 				data.sessionsVscode[i].developer.color,
-				data.sessionsVscode[i].developer.name
+				data.sessionsVscode[i].developer.username
 			);
 			tempDeveloper.setID(data.sessionsVscode[i].developer.id);
 

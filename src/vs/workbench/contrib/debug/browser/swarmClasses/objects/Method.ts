@@ -5,12 +5,12 @@ export class Method {
 	id: number = -1;
 	name: string;
 	type: Type;
-	signature: string;
+	//signature: string;
 
-	constructor(name: string, type: Type, signature: string) {
+	constructor(name: string, type: Type) {
 		this.name = name;
 		this.type = type;
-		this.signature = signature;
+		//this.signature = signature;
 	}
 
 	getID() {
@@ -24,10 +24,11 @@ export class Method {
 	getName() {
 		return this.name;
 	}
-
+	/*
 	getSignature() {
 		return this.signature;
 	}
+	*/
 
 	getType() {
 		return this.type;
