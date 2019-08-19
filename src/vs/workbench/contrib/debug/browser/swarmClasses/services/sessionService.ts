@@ -83,6 +83,7 @@ export class SessionService {
 				tempDeveloper,
 				tempTask
 			);
+			tempSession.setVscodeSession(data.sessionsVscode[i].vscodeSession);
 			tempSession.setID(data.sessionsVscode[i].id);
 
 			answer[i] = tempSession;

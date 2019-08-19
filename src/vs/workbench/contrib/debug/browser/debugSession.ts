@@ -207,6 +207,9 @@ export class DebugSession implements IDebugSession {
 			// __sessionID only used for EH debugging (but we add it always for now...)
 			config.__sessionId = this.getId();
 
+			// SwarmDebug
+			this.raw.setSwarmSession(this.id);
+
 			return this.raw.launchOrAttach(config).then(result => {
 				return undefined;
 			});
@@ -395,7 +398,6 @@ export class DebugSession implements IDebugSession {
 
 	stepIn(threadId: number): Promise<void> {
 		if (this.raw) {
-			this.raw.setSwarmSession(this.id); // swarmdebug
 			return this.raw.stepIn({ threadId }).then(() => undefined);
 		}
 		return Promise.reject(new Error('no debug adapter'));
