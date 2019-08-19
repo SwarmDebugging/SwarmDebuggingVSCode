@@ -140,7 +140,7 @@ export class RawDebugSession {
 				case 'continued':
 					this.allThreadsContinued =
 						(<DebugProtocol.ContinuedEvent>event).body.allThreadsContinued ===
-						false
+							false
 							? false
 							: true;
 					this._onDidContinued.fire(<DebugProtocol.ContinuedEvent>event);

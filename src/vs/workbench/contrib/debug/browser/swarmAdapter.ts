@@ -82,8 +82,8 @@ export class SwarmAdapter {
 					this.steppedInSecondStackTrace(response);
 				} else if (this.steppedIn) {
 					this.steppedInFirstStackTrace(response);
-				} else if (!this.continued && this.firstStackTrace) {
-					this.firstStackTraceContinue(response);
+				} else if (!this.continued && !this.steppedOver && this.firstStackTrace) {
+					this.handleFirstStackTrace(response);
 				}
 				break;
 			case 'source':
@@ -96,6 +96,7 @@ export class SwarmAdapter {
 				this.handleNextCommand(response);
 				break;
 		}
+
 	}
 
 	async handleContinueCommand(response: DebugProtocol.Response) {
@@ -177,9 +178,71 @@ export class SwarmAdapter {
 		}
 	}
 
-	handleNextCommand(response: DebugProtocol.Response) {
-		console.log('next');
+	async handleNextCommand(response: DebugProtocol.Response) {
 		this.steppedOver = true;
+		this.eventKind = 'next';
+
+		let artefact;
+		try {
+			artefact = await fs.readFileSync(this.continuePath, 'utf8');
+			this.swarmArtefactInvoking = new Artefact(artefact);
+
+			let result = await this.swarmSessionService.getByVscodeId(
+				this.vscodeSession
+			);
+			if (result instanceof Session) {
+				this.swarmSession = result;
+
+				this.swarmTypeInvoking = new Type(
+					getTypeFullname(this.rootPathInvoking, this.continuePath),
+					this.continuePath,
+					fromPathToTypeName(this.continuePath),
+					this.swarmArtefactInvoking,
+					this.swarmSession);
+			}
+
+		} catch (error) {
+			this.fileInNodeInternals = true;
+			console.log(error);
+		}
+
+		let createdTypes = await this.swarmTypeService.getAllBySession(this.swarmSession);
+		let shouldCreate = true;
+
+		for (let item of createdTypes) {
+			if (this.swarmTypeInvoking.equals(item)) {
+				this.swarmTypeInvoking.setID(item.getID());
+				shouldCreate = false;
+				break;
+			}
+		}
+		if (shouldCreate) {
+			this.swarmTypeService.setArtefact(this.swarmArtefactInvoking);
+			this.swarmTypeService.setType(this.swarmTypeInvoking);
+			let response = await this.swarmTypeService.create();
+			if (response) {
+				createdTypes[createdTypes.length] = this.swarmTypeInvoking;
+			}
+		}
+
+		this.swarmMethodInvoking = new Method(
+			this.swarmArtefactInvoking.getSourceCode().split('\n')[this.continueLine - 1],
+			this.swarmTypeInvoking
+		);
+		this.swarmMethodService.setMethod(this.swarmMethodInvoking);
+		await this.swarmMethodService.create();
+
+		this.swarmEvent = new Event(
+			this.swarmMethodInvoking,
+			this.swarmSession,
+			this.continueLine,
+			this.eventKind
+		);
+
+		this.swarmEventService.setEvent(this.swarmEvent);
+		await this.swarmEventService.create();
+
+		this.firstStackTrace = true;
 	}
 
 	setSession(vscodeSessionId: string) {
@@ -193,7 +256,7 @@ export class SwarmAdapter {
 		}
 	}
 
-	async firstStackTraceContinue(response: DebugProtocol.Response) {
+	async handleFirstStackTrace(response: DebugProtocol.Response) {
 		this.continueLine = response.body.stackFrames[0].line;
 		this.continuePath = response.body.stackFrames[0].source.path;
 		this.firstStackTrace = false;
