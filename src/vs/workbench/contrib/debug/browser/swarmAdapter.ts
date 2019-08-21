@@ -25,29 +25,36 @@ export class SwarmAdapter {
 	private lastSteppedInEvent: Event;
 	private continued: boolean = false;
 	private steppedOver: boolean = false;
-	private fileInNodeInternals = false;
+	private fileInInternalsInvokingOpen = false;
+	private fileInInternalsInvokedOpen = false;
 	private firstStackTrace: boolean = true;
+	private internalFiles: Map<string, string> = new Map();
+	private firstVariables: boolean = true;
+	private secondVariables: boolean = false;
+	//private breakpointsToggles: Map<number>
 
 	// Data to persist
 	private vscodeSession: string;
-	private invoked: string;
-	private invoking: string;
+	private nextStackName: string;
+	private pastStackName: string;
 	private rootPathInvoking: string;
-	private rootPathInvoked: string;
 	private eventKind: string;
-	private continueLine: number;
-	private continuePath: string;
+
+	private nextLine: number;
+	private nextPath: string;
+	private pastLine: number;
+	private pastPath: string;
 
 	private swarmSession: Session;
 	private swarmEvent: Event;
 
 	private swarmMethodInvoking: Method;
 	private swarmTypeInvoking: Type;
-	private swarmArtefactInvoking: Artefact;
+	private swarmLastArtefact: Artefact;
 
 	private swarmMethodInvoked: Method;
 	private swarmTypeInvoked: Type;
-	private swarmArtefactInvoked: Artefact;
+	private swarmNextArtefact: Artefact;
 
 	private swarmInvocation: Invocation;
 
@@ -63,190 +70,52 @@ export class SwarmAdapter {
 
 		switch (response.command) {
 			case 'variables':
-				this.defineWorkspace(response);
+				if (this.firstVariables) {
+					this.defineWorkspace(response);
+					this.firstVariables = false;
+					this.secondVariables = true;
+				} else if (this.secondVariables) {
+					this.handleSecondVariables();
+				}
 				break;
+			// The main events
 			case 'stepIn':
 				this.steppedIn = true;
 				this.eventKind = 'stepIn';
 				break;
 			case 'stepOut':
+				this.steppedOut = true;
 				this.eventKind = 'stepOut';
-				this.swarmEventService.setEvent(new Event(this.lastSteppedInMethod,
-					this.swarmSession,
-					this.lastSteppedInEvent.getLineNumber(),
-					this.eventKind));
-				await this.swarmEventService.create();
 				break;
+			case 'continue':
+				this.continued = true;
+				this.eventKind = 'continue';
+				break;
+			case 'next':
+				this.steppedOver = true;
+				this.eventKind = 'stepOver';
+				break;
+			//
 			case 'stackTrace':
 				if (this.secondStackTrace) {
-					this.steppedInSecondStackTrace(response);
-				} else if (this.steppedIn) {
-					this.steppedInFirstStackTrace(response);
-				} else if (!this.continued && !this.steppedOver && this.firstStackTrace) {
+					if (this.steppedIn || this.steppedOver) {
+						this.handleSecondStackTrace(response);
+					}
+				} else if (!this.continued
+					&& !this.steppedOver
+					&& !this.steppedIn
+					&& this.firstStackTrace) {
 					this.handleFirstStackTrace(response);
 				}
 				break;
 			case 'source':
 				this.handleSourceCommand(response);
 				break;
-			case 'continue':
-				this.handleContinueCommand(response);
-				break;
-			case 'next':
-				this.handleNextCommand(response);
+			case 'disconnect':
+				this.clearConditions();
 				break;
 		}
 
-	}
-
-	async handleContinueCommand(response: DebugProtocol.Response) {
-
-		this.continued = true;
-		this.eventKind = 'continue';
-
-		let artefact;
-		try {
-			artefact = await fs.readFileSync(this.continuePath, 'utf8');
-			this.swarmArtefactInvoking = new Artefact(artefact);
-
-			let result = await this.swarmSessionService.getByVscodeId(
-				this.vscodeSession
-			);
-			if (result instanceof Session) {
-				this.swarmSession = result;
-
-				this.swarmTypeInvoking = new Type(
-					getTypeFullname(this.rootPathInvoking, this.continuePath),
-					this.continuePath,
-					fromPathToTypeName(this.continuePath),
-					this.swarmArtefactInvoking,
-					this.swarmSession);
-			}
-
-		} catch (error) {
-			this.fileInNodeInternals = true;
-			console.log(error);
-		}
-
-		let createdTypes = await this.swarmTypeService.getAllBySession(this.swarmSession);
-		let shouldCreate = true;
-
-		for (let item of createdTypes) {
-			if (this.swarmTypeInvoking.equals(item)) {
-				this.swarmTypeInvoking.setID(item.getID());
-				shouldCreate = false;
-				break;
-			}
-		}
-		if (shouldCreate) {
-			this.swarmTypeService.setArtefact(this.swarmArtefactInvoking);
-			this.swarmTypeService.setType(this.swarmTypeInvoking);
-			let response = await this.swarmTypeService.create();
-			if (response) {
-				createdTypes[createdTypes.length] = this.swarmTypeInvoking;
-			}
-		}
-
-		this.swarmMethodInvoking = new Method(
-			this.swarmArtefactInvoking.getSourceCode().split('\n')[this.continueLine - 1],
-			this.swarmTypeInvoking
-		);
-		this.swarmMethodService.setMethod(this.swarmMethodInvoking);
-		await this.swarmMethodService.create();
-
-		this.swarmEvent = new Event(
-			this.swarmMethodInvoking,
-			this.swarmSession,
-			this.continueLine,
-			this.eventKind
-		);
-
-		this.swarmEventService.setEvent(this.swarmEvent);
-		await this.swarmEventService.create();
-
-		this.firstStackTrace = true;
-	}
-
-	handleSourceCommand(response: DebugProtocol.Response) {
-		if (this.steppedIn && this.secondStackTrace && this.fileInNodeInternals) {
-			let artefact = response.body.content;
-			this.swarmArtefactInvoked = new Artefact(artefact);
-			this.steppedIn = false;
-		} else if (this.continued) {
-			//save the source as new artefact
-			this.continued = false;
-		}
-	}
-
-	async handleNextCommand(response: DebugProtocol.Response) {
-		this.steppedOver = true;
-		this.eventKind = 'next';
-
-		let artefact;
-		try {
-			artefact = await fs.readFileSync(this.continuePath, 'utf8');
-			this.swarmArtefactInvoking = new Artefact(artefact);
-
-			let result = await this.swarmSessionService.getByVscodeId(
-				this.vscodeSession
-			);
-			if (result instanceof Session) {
-				this.swarmSession = result;
-
-				this.swarmTypeInvoking = new Type(
-					getTypeFullname(this.rootPathInvoking, this.continuePath),
-					this.continuePath,
-					fromPathToTypeName(this.continuePath),
-					this.swarmArtefactInvoking,
-					this.swarmSession);
-			}
-
-		} catch (error) {
-			this.fileInNodeInternals = true;
-			console.log(error);
-		}
-
-		let createdTypes = await this.swarmTypeService.getAllBySession(this.swarmSession);
-		let shouldCreate = true;
-
-		for (let item of createdTypes) {
-			if (this.swarmTypeInvoking.equals(item)) {
-				this.swarmTypeInvoking.setID(item.getID());
-				shouldCreate = false;
-				break;
-			}
-		}
-		if (shouldCreate) {
-			this.swarmTypeService.setArtefact(this.swarmArtefactInvoking);
-			this.swarmTypeService.setType(this.swarmTypeInvoking);
-			let response = await this.swarmTypeService.create();
-			if (response) {
-				createdTypes[createdTypes.length] = this.swarmTypeInvoking;
-			}
-		}
-
-		this.swarmMethodInvoking = new Method(
-			this.swarmArtefactInvoking.getSourceCode().split('\n')[this.continueLine - 1],
-			this.swarmTypeInvoking
-		);
-		this.swarmMethodService.setMethod(this.swarmMethodInvoking);
-		await this.swarmMethodService.create();
-
-		this.swarmEvent = new Event(
-			this.swarmMethodInvoking,
-			this.swarmSession,
-			this.continueLine,
-			this.eventKind
-		);
-
-		this.swarmEventService.setEvent(this.swarmEvent);
-		await this.swarmEventService.create();
-
-		this.firstStackTrace = true;
-	}
-
-	setSession(vscodeSessionId: string) {
-		this.vscodeSession = vscodeSessionId;
 	}
 
 	defineWorkspace(response: DebugProtocol.Response) {
@@ -257,108 +126,306 @@ export class SwarmAdapter {
 	}
 
 	async handleFirstStackTrace(response: DebugProtocol.Response) {
-		this.continueLine = response.body.stackFrames[0].line;
-		this.continuePath = response.body.stackFrames[0].source.path;
+		this.pastLine = response.body.stackFrames[0].line;
+		this.pastPath = response.body.stackFrames[0].source.path;
+		this.pastStackName = response.body.stackFrames[0].name;
 		this.firstStackTrace = false;
-	}
 
-	async steppedInFirstStackTrace(response: DebugProtocol.Response) {
-		this.invoked = response.body.stackFrames[0].name;
-		// TO DO: Find the right path to access the file for the reading
-		/*i found out that <node_internals> are built-in core modules of Node.js
-		and i don't know how to access them which is a issue for the continue event
-		since i need the line in the file where the user is stopped*/
-		/*I found that in the source command in the body in the content attribute is the whole
-		content of the file to load, so we just need to associate this with the artfact we weren't able
-		to create before*/
-		let artefact;
 		try {
-			artefact = await fs.readFileSync(response.body.stackFrames[0].source.path, 'utf8');//error here
-			this.swarmArtefactInvoking = new Artefact(artefact);//isn't this invoked???*/
-			this.steppedIn = false;
+			this.swarmLastArtefact = new Artefact(await fs.readFileSync(response.body.stackFrames[0].source.path, 'utf8'));
 		} catch (error) {
-			this.fileInNodeInternals = true;
-			console.log(error);
+			let content = this.internalFiles.get(response.body.stackFrames[0].source.path);
+			if (typeof content === 'string') {
+				this.swarmLastArtefact = new Artefact(content);
+			} else {
+				this.fileInInternalsInvokingOpen = true;
+			}
 		}
+
+		if (this.pastStackName === "(anonymous function)" && typeof this.swarmLastArtefact.getSourceCode() === 'string') {
+			this.pastStackName = this.swarmLastArtefact.getSourceCode().split('\n')[this.pastLine - 1];
+		}
+
 		this.secondStackTrace = true;
 	}
 
-	async steppedInSecondStackTrace(response: DebugProtocol.Response) {
-		let result = await this.swarmSessionService.getByVscodeId(
-			this.vscodeSession
-		);
-		if (result instanceof Session) {
-			this.swarmSession = result;
-
-			this.invoking = response.body.stackFrames[0].name;
-
-			let artefact;
-			try {
-				artefact = await fs.readFileSync(response.body.stackFrames[0].source.path, 'utf8');//error here
-			} catch (error) {
-				artefact = await '***' + response.body.stackFrames[0].source.origin + '***';
-				console.log(error);
+	handleSourceCommand(response: DebugProtocol.Response) {
+		if (this.fileInInternalsInvokingOpen || this.fileInInternalsInvokedOpen) {
+			//let artefact = response.body.content;
+			//this.swarmNextArtefact = new Artefact(artefact);
+			if (this.fileInInternalsInvokingOpen) {
+				this.internalFiles.set(this.swarmTypeInvoking.getFullPath(), response.body.content);
+				this.swarmLastArtefact = new Artefact(response.body.content);
+				this.swarmTypeInvoking.setArtefact(this.swarmLastArtefact);
+			} else if (this.fileInInternalsInvokedOpen) {
+				this.internalFiles.set(this.swarmTypeInvoked.getFullPath(), response.body.content);
+				this.swarmNextArtefact = new Artefact(response.body.content);
+				this.swarmTypeInvoked.setArtefact(this.swarmNextArtefact);
+				this.swarmMethodInvoked.setType(this.swarmTypeInvoked);
 			}
-			this.swarmArtefactInvoking = new Artefact(artefact);
+		}
+	}
 
-			this.swarmTypeInvoking = new Type(
-				getTypeFullname(this.rootPathInvoking, response.body.stackFrames[0].source.path),
-				response.body.stackFrames[0].source.path,
-				fromPathToTypeName(response.body.stackFrames[0].source.path),
-				this.swarmArtefactInvoking,
-				this.swarmSession);
+	setSession(vscodeSessionId: string) {
+		this.vscodeSession = vscodeSessionId;
+	}
 
-			let createdTypes = await this.swarmTypeService.getAllBySession(this.swarmSession);
-			let shouldCreate = true;
+	async handleSecondStackTrace(response: DebugProtocol.Response) {
 
-			for (let item of createdTypes) {
-				if (this.swarmTypeInvoking.equals(item)) {
-					this.swarmTypeInvoking.setID(item.getID());
-					shouldCreate = false;
-					break;
-				}
+		this.nextLine = response.body.stackFrames[0].line;
+		this.nextPath = response.body.stackFrames[0].source.path;
+		this.nextStackName = response.body.stackFrames[0].name;
+
+		try {
+			this.swarmNextArtefact = new Artefact(await fs.readFileSync(this.nextPath, 'utf8'));
+		} catch (error) {
+			let content = this.internalFiles.get(this.nextPath);
+			if (typeof content === 'string') {
+				this.swarmNextArtefact = new Artefact(content);
+			} else {
+				this.fileInInternalsInvokedOpen = true;
 			}
-			if (shouldCreate) {
-				this.swarmTypeService.setArtefact(this.swarmArtefactInvoking);
-				this.swarmTypeService.setType(this.swarmTypeInvoking);
-				let response = await this.swarmTypeService.create();
-				if (response) {
-					createdTypes[createdTypes.length] = this.swarmTypeInvoking;
-				}
-			}
+		}
 
-			this.swarmMethodInvoking = new Method(
-				this.invoking,
-				this.swarmTypeInvoking);
-			this.swarmMethodService.setMethod(this.swarmMethodInvoking);
-			await this.swarmMethodService.create();
+	}
 
-			this.swarmMethodInvoked = new Method(
-				this.invoked,
-				this.swarmTypeInvoking);
-			this.swarmMethodService.setMethod(this.swarmMethodInvoked);
-			await this.swarmMethodService.create();
+	clearConditions() {
+		this.steppedIn = false;
+		this.secondStackTrace = false;
+		this.workspace = false;
+		this.steppedOut = false;
+		this.continued = false;
+		this.steppedOver = false;
+		this.firstStackTrace = true;
+		this.firstVariables = true;
+		this.secondVariables = false;
+	}
 
-			let event = new Event(
-				//invoked or invoking?
-				this.swarmMethodInvoked,
-				this.swarmSession,
-				response.body.stackFrames[0].line,
-				this.eventKind
+	async handleSecondVariables() {
+		//this.firstVariables = true;
+		this.secondVariables = true;
+		if (this.steppedIn) {
+			let result = await this.swarmSessionService.getByVscodeId(
+				this.vscodeSession
 			);
-			this.swarmEvent = event;
+			if (result instanceof Session) {
+				this.swarmSession = result;
+
+				this.swarmTypeInvoking = new Type(
+					getTypeFullname(this.rootPathInvoking, this.pastPath),
+					this.pastPath,
+					fromPathToTypeName(this.pastPath),
+					this.swarmLastArtefact,
+					this.swarmSession);
+
+				let createdTypes = await this.swarmTypeService.getAllBySession(this.swarmSession);
+				let shouldCreate = true;
+
+				for (let item of createdTypes) {
+					if (this.swarmTypeInvoking.equals(item)) {
+						this.swarmTypeInvoking.setID(item.getID());
+						shouldCreate = false;
+						break;
+					}
+				}
+				if (shouldCreate) {
+					this.swarmTypeService.setArtefact(this.swarmLastArtefact);
+					this.swarmTypeService.setType(this.swarmTypeInvoking);
+					let response = await this.swarmTypeService.create();
+					if (response) {
+						createdTypes[createdTypes.length] = this.swarmTypeInvoking;
+					}
+				}
+
+				this.swarmTypeInvoked = new Type(
+					getTypeFullname(this.rootPathInvoking, this.nextPath),
+					this.nextPath,
+					fromPathToTypeName(this.nextPath),
+					this.swarmNextArtefact,
+					this.swarmSession);
+
+				createdTypes = await this.swarmTypeService.getAllBySession(this.swarmSession);
+				shouldCreate = true;
+
+				for (let item of createdTypes) {
+					if (this.swarmTypeInvoked.equals(item)) {
+						this.swarmTypeInvoked.setID(item.getID());
+						shouldCreate = false;
+						break;
+					}
+				}
+				if (shouldCreate) {
+					this.swarmTypeService.setArtefact(this.swarmNextArtefact);
+					this.swarmTypeService.setType(this.swarmTypeInvoked);
+					let response = await this.swarmTypeService.create();
+					if (response) {
+						createdTypes[createdTypes.length] = this.swarmTypeInvoked;
+					}
+				}
+
+				this.swarmMethodInvoking = new Method(
+					this.pastStackName,
+					this.swarmTypeInvoking);
+				this.swarmMethodService.setMethod(this.swarmMethodInvoking);
+				await this.swarmMethodService.create();
+
+				this.swarmMethodInvoked = new Method(
+					this.nextStackName,
+					this.swarmTypeInvoked);
+				this.swarmMethodService.setMethod(this.swarmMethodInvoked);
+				await this.swarmMethodService.create();
+
+				this.swarmEvent = new Event(
+					this.swarmMethodInvoked,
+					this.swarmSession,
+					this.pastLine,
+					this.eventKind
+				);
+				this.swarmEventService.setEvent(this.swarmEvent);
+				await this.swarmEventService.create();
+
+				this.swarmInvocation = new Invocation(this.swarmMethodInvoking, this.swarmMethodInvoked, this.swarmSession);
+				this.swarmInvocationService.setInvocation(this.swarmInvocation);
+				this.swarmInvocationService.create();
+
+				this.lastSteppedInMethod = this.swarmMethodInvoked;
+				this.lastSteppedInType = this.swarmTypeInvoked;
+				this.lastSteppedInEvent = this.swarmEvent;
+
+				this.pastLine = this.nextLine;
+				this.pastPath = this.nextPath;
+				this.pastStackName = this.nextStackName;
+
+			}
+		} else if (this.steppedOut) {
+
+			this.swarmEventService.setEvent(new Event(
+				this.lastSteppedInMethod,
+				this.swarmSession,
+				this.lastSteppedInEvent.getLineNumber(),
+				this.eventKind));
 			this.swarmEventService.setEvent(this.swarmEvent);
 			await this.swarmEventService.create();
 
-			this.swarmInvocation = new Invocation(this.swarmMethodInvoking, this.swarmMethodInvoked, this.swarmSession);
-			this.swarmInvocationService.setInvocation(this.swarmInvocation);
-			this.swarmInvocationService.create();
+			this.pastLine = this.lastSteppedInEvent.getLineNumber();
+			this.pastPath = this.lastSteppedInMethod.getType().getFullPath();
+			this.pastStackName = this.lastSteppedInMethod.getName();
 
-			this.lastSteppedInMethod = this.swarmMethodInvoked;
-			this.lastSteppedInType = this.swarmTypeInvoked;
-			this.lastSteppedInEvent = event;
+		} else if (this.steppedOver) {
+
+			let result = await this.swarmSessionService.getByVscodeId(
+				this.vscodeSession
+			);
+			if (result instanceof Session) {
+				this.swarmSession = result;
+
+				this.swarmTypeInvoking = new Type(
+					getTypeFullname(this.rootPathInvoking, this.pastPath),
+					this.pastPath,
+					fromPathToTypeName(this.pastPath),
+					this.swarmLastArtefact,
+					this.swarmSession);
+
+				let createdTypes = await this.swarmTypeService.getAllBySession(this.swarmSession);
+				let shouldCreate = true;
+
+				for (let item of createdTypes) {
+					if (this.swarmTypeInvoking.equals(item)) {
+						this.swarmTypeInvoking.setID(item.getID());
+						shouldCreate = false;
+						break;
+					}
+				}
+				if (shouldCreate) {
+					this.swarmTypeService.setArtefact(this.swarmLastArtefact);
+					this.swarmTypeService.setType(this.swarmTypeInvoking);
+					let response = await this.swarmTypeService.create();
+					if (response) {
+						createdTypes[createdTypes.length] = this.swarmTypeInvoking;
+					}
+				}
+
+				this.swarmMethodInvoking = new Method(
+					this.swarmLastArtefact.getSourceCode().split('\n')[this.pastLine - 1],
+					this.swarmTypeInvoking
+				);
+				this.swarmMethodService.setMethod(this.swarmMethodInvoking);
+				// pegou dados do evento anterior ta errado
+				await this.swarmMethodService.create();
+
+				this.swarmEvent = new Event(
+					this.swarmMethodInvoking,
+					this.swarmSession,
+					this.pastLine,
+					this.eventKind
+				);
+
+				this.swarmEventService.setEvent(this.swarmEvent);
+				await this.swarmEventService.create();
+
+			}
+
+			this.pastLine = this.nextLine;
+			this.pastPath = this.nextPath;
+			this.pastStackName = this.nextStackName;
+
+		} else if (this.continued) {
+
+			let result = await this.swarmSessionService.getByVscodeId(
+				this.vscodeSession
+			);
+			if (result instanceof Session) {
+				this.swarmSession = result;
+
+				this.swarmTypeInvoking = new Type(
+					getTypeFullname(this.rootPathInvoking, this.pastPath),
+					this.pastPath,
+					fromPathToTypeName(this.pastPath),
+					this.swarmLastArtefact,
+					this.swarmSession);
+
+				let createdTypes = await this.swarmTypeService.getAllBySession(this.swarmSession);
+				let shouldCreate = true;
+
+				for (let item of createdTypes) {
+					if (this.swarmTypeInvoking.equals(item)) {
+						this.swarmTypeInvoking.setID(item.getID());
+						shouldCreate = false;
+						break;
+					}
+				}
+				if (shouldCreate) {
+					this.swarmTypeService.setArtefact(this.swarmLastArtefact);
+					this.swarmTypeService.setType(this.swarmTypeInvoking);
+					let response = await this.swarmTypeService.create();
+					if (response) {
+						createdTypes[createdTypes.length] = this.swarmTypeInvoking;
+					}
+				}
+
+				this.swarmMethodInvoking = new Method(
+					this.swarmLastArtefact.getSourceCode().split('\n')[this.pastLine - 1],
+					this.swarmTypeInvoking
+				);
+				this.swarmMethodService.setMethod(this.swarmMethodInvoking);
+				await this.swarmMethodService.create();
+
+				this.swarmEvent = new Event(
+					this.swarmMethodInvoking,
+					this.swarmSession,
+					this.pastLine,
+					this.eventKind
+				);
+
+				this.swarmEventService.setEvent(this.swarmEvent);
+				await this.swarmEventService.create();
+
+
+			}
+
+
 		}
-		this.secondStackTrace = false;
+
 	}
 
 }
@@ -373,6 +440,12 @@ function fromPathToTypeName(path: string) {
 
 function getTypeFullname(rootPath: string, filePath: string) {
 
+	if (filePath.split('>').length > 1) {
+		let splittedFilePath = filePath.split('>');
+		let splittedSplittedFilePath = splittedFilePath[0].split('<');
+		return splittedSplittedFilePath[1] + '.' + splittedFilePath[1].split('/')[1].split('.')[0];
+	}
+
 	let splittedRootPath = rootPath.split('/');
 	let splittedFilePath = filePath.split('/');
 
@@ -386,9 +459,5 @@ function getTypeFullname(rootPath: string, filePath: string) {
 	}
 
 	return fullname;
-
-}
-
-function getSignature() {
 
 }

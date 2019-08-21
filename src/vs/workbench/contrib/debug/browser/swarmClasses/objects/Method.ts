@@ -34,4 +34,7 @@ export class Method {
 		return this.type;
 	}
 
+	setType(type: Type) {
+		this.type = type;
+	}
 }
