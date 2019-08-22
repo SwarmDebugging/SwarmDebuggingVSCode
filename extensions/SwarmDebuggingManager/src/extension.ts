@@ -331,8 +331,8 @@ function getTypeFullname(rootPath: string, filePath: string) {
 	let splittedFilePath = filePath.split('/');
 
 	let fullname = '';
-	for (let i = splittedRootPath.length + 1; i < splittedFilePath.length; i++) {
-		if (i === splittedRootPath.length + 1) {
+	for (let i = splittedRootPath.length - 1; i < splittedFilePath.length; i++) {
+		if (i === splittedRootPath.length - 1) {
 			fullname = splittedFilePath[i];
 		} else {
 			fullname = fullname + '.' + splittedFilePath[i];
