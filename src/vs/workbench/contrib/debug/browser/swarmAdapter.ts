@@ -11,13 +11,17 @@ import { Event } from './swarmClasses/objects/Event';
 import { EventService } from 'vs/workbench/contrib/debug/browser/swarmClasses/services/eventService';
 import { InvocationService } from 'vs/workbench/contrib/debug/browser/swarmClasses/services/invocationService';
 import { Invocation } from 'vs/workbench/contrib/debug/browser/swarmClasses/objects/Invocation';
+import { BreakpointService } from './swarmClasses/services/breakpointService';
+import { Breakpoint } from './swarmClasses/objects/Breakpoint';
 
 export const SERVERURL = 'http://localhost:8080/graphql?';
 
 export class SwarmAdapter {
 	// Control variables
 	private steppedIn: boolean = false;
+	private firstStackTrace: boolean = true;
 	private secondStackTrace: boolean = false;
+	private thirdStackTrace: boolean = false;
 	private workspace: boolean = false;
 	private steppedOut: boolean = false;
 	private lastSteppedInMethod: Method;
@@ -27,11 +31,11 @@ export class SwarmAdapter {
 	private steppedOver: boolean = false;
 	private fileInInternalsInvokingOpen = false;
 	private fileInInternalsInvokedOpen = false;
-	private firstStackTrace: boolean = true;
 	private internalFiles: Map<string, string> = new Map();
 	private firstVariables: boolean = true;
 	private secondVariables: boolean = false;
-	//private breakpointsToggles: Map<number>
+	private swarmBreakpointService: BreakpointService;
+
 
 	// Data to persist
 	private vscodeSession: string;
@@ -97,15 +101,22 @@ export class SwarmAdapter {
 				break;
 			//
 			case 'stackTrace':
-				if (this.secondStackTrace) {
-					if (this.steppedIn || this.steppedOver) {
+				if(this.thirdStackTrace){
+					if (this.steppedIn || this.steppedOver || this.continued) {
 						this.handleSecondStackTrace(response);
 					}
+					this.secondStackTrace = true;
+					this.thirdStackTrace = false;
+				} else if (this.secondStackTrace) {
+					this.secondStackTrace = false;
+					this.thirdStackTrace = true;
 				} else if (!this.continued
 					&& !this.steppedOver
 					&& !this.steppedIn
 					&& this.firstStackTrace) {
 					this.handleFirstStackTrace(response);
+					this.firstStackTrace = false;
+					this.secondStackTrace = true;
 				}
 				break;
 			case 'source':
@@ -129,7 +140,6 @@ export class SwarmAdapter {
 		this.pastLine = response.body.stackFrames[0].line;
 		this.pastPath = response.body.stackFrames[0].source.path;
 		this.pastStackName = response.body.stackFrames[0].name;
-		this.firstStackTrace = false;
 
 		try {
 			this.swarmLastArtefact = new Artefact(await fs.readFileSync(response.body.stackFrames[0].source.path, 'utf8'));
@@ -146,22 +156,19 @@ export class SwarmAdapter {
 			this.pastStackName = this.swarmLastArtefact.getSourceCode().split('\n')[this.pastLine - 1];
 		}
 
-		this.secondStackTrace = true;
 	}
 
 	handleSourceCommand(response: DebugProtocol.Response) {
 		if (this.fileInInternalsInvokingOpen || this.fileInInternalsInvokedOpen) {
 			//let artefact = response.body.content;
-			//this.swarmNextArtefact = new Artefact(artefact);
+			//this.swarmNextArtefactswarmNextArtefact = new Artefact(artefact);
 			if (this.fileInInternalsInvokingOpen) {
-				this.internalFiles.set(this.swarmTypeInvoking.getFullPath(), response.body.content);
+				this.internalFiles.set(this.pastPath, response.body.content);
 				this.swarmLastArtefact = new Artefact(response.body.content);
 				this.swarmTypeInvoking.setArtefact(this.swarmLastArtefact);
 			} else if (this.fileInInternalsInvokedOpen) {
-				this.internalFiles.set(this.swarmTypeInvoked.getFullPath(), response.body.content);
+				this.internalFiles.set(this.nextPath, response.body.content);
 				this.swarmNextArtefact = new Artefact(response.body.content);
-				this.swarmTypeInvoked.setArtefact(this.swarmNextArtefact);
-				this.swarmMethodInvoked.setType(this.swarmTypeInvoked);
 			}
 		}
 	}
@@ -187,6 +194,10 @@ export class SwarmAdapter {
 			}
 		}
 
+		if (this.nextStackName === "(anonymous function)" && typeof this.swarmNextArtefact.getSourceCode() === 'string') {
+			this.nextStackName = this.swarmNextArtefact.getSourceCode().split('\n')[this.nextLine - 1];
+		}
+
 	}
 
 	clearConditions() {
@@ -202,8 +213,6 @@ export class SwarmAdapter {
 	}
 
 	async handleSecondVariables() {
-		//this.firstVariables = true;
-		this.secondVariables = true;
 		if (this.steppedIn) {
 			let result = await this.swarmSessionService.getByVscodeId(
 				this.vscodeSession
@@ -296,6 +305,8 @@ export class SwarmAdapter {
 				this.pastPath = this.nextPath;
 				this.pastStackName = this.nextStackName;
 
+				this.steppedIn = false;
+
 			}
 		} else if (this.steppedOut) {
 
@@ -304,12 +315,13 @@ export class SwarmAdapter {
 				this.swarmSession,
 				this.lastSteppedInEvent.getLineNumber(),
 				this.eventKind));
-			this.swarmEventService.setEvent(this.swarmEvent);
 			await this.swarmEventService.create();
 
 			this.pastLine = this.lastSteppedInEvent.getLineNumber();
 			this.pastPath = this.lastSteppedInMethod.getType().getFullPath();
 			this.pastStackName = this.lastSteppedInMethod.getName();
+
+			this.steppedOut = false;
 
 		} else if (this.steppedOver) {
 
@@ -350,7 +362,6 @@ export class SwarmAdapter {
 					this.swarmTypeInvoking
 				);
 				this.swarmMethodService.setMethod(this.swarmMethodInvoking);
-				// pegou dados do evento anterior ta errado
 				await this.swarmMethodService.create();
 
 				this.swarmEvent = new Event(
@@ -368,6 +379,8 @@ export class SwarmAdapter {
 			this.pastLine = this.nextLine;
 			this.pastPath = this.nextPath;
 			this.pastStackName = this.nextStackName;
+
+			this.steppedOver = false;
 
 		} else if (this.continued) {
 
@@ -420,6 +433,11 @@ export class SwarmAdapter {
 				this.swarmEventService.setEvent(this.swarmEvent);
 				await this.swarmEventService.create();
 
+				this.pastLine = this.nextLine;
+				this.pastPath = this.nextPath;
+				this.pastStackName = this.nextStackName;
+
+				this.continued = false;
 
 			}
 
