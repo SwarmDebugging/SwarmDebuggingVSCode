@@ -27,8 +27,6 @@ var taskService: TaskService = new TaskService(currentlyActiveTask);
 
 export async function activate() {
 
-	console.log('SwarmAccountManager is now active');
-
 	const taskProvider = new TaskProvider(-1); //add -1 case
 
 	vscode.window.registerTreeDataProvider('taskView', taskProvider);
@@ -49,11 +47,11 @@ export async function activate() {
 	});
 
 	vscode.commands.registerCommand('extension.swarm-debugging.logout', () => {
-		if(vscode.debug.activeDebugSession !== undefined) {
+		if (vscode.debug.activeDebugSession !== undefined) {
 			return;
 		}
 		let res = currentlyActiveDeveloper.logout();
-		if(res > 0) {
+		if (res > 0) {
 			if (currentlyActiveSession.getID() > 0) {
 				sessionService.stopSession();
 			}
@@ -64,9 +62,9 @@ export async function activate() {
 
 	vscode.commands.registerCommand('extension.swarm-debugging.createProduct', async () => {
 		productService.createProduct(currentlyActiveDeveloper).then((res) => {
-			if(typeof res === 'number'){
+			if (typeof res === 'number') {
 				return;
-			}else if (typeof res === 'object') {
+			} else if (typeof res === 'object') {
 				currentlyActiveProduct.setID(res.getID());
 				currentlyActiveProduct.setName(res.getName());
 				taskProvider.updateProductId(currentlyActiveProduct.getID());
@@ -76,9 +74,9 @@ export async function activate() {
 
 	vscode.commands.registerCommand('extension.swarm-debugging.createTask', () => {
 		taskService.createTask(currentlyActiveDeveloper, currentlyActiveProduct).then((res: number) => {
-			if(res > 0){
+			if (res > 0) {
 				taskProvider.refresh();
-			} else if(res < 0) {
+			} else if (res < 0) {
 				return;
 			}
 		});
@@ -91,7 +89,7 @@ export async function activate() {
 			return;
 		}
 
-		while(!sessionDescription){
+		while (!sessionDescription) {
 			var sessionDescription = await vscode.window.showInputBox({ prompt: 'Enter a description for the session you want to start' });
 		}
 		if (sessionDescription === undefined) {
@@ -112,13 +110,13 @@ export async function activate() {
 		sessionService.startSession().then((res: number) => {
 			if (res > 0) {
 				currentlyActiveSession.setID(res);
-				vscode.window.showInformationMessage('started a session');
+				vscode.window.showInformationMessage('Session started');
 			}
 		});
 	});
 
 	vscode.commands.registerCommand('extension.swarm-debugging.stopSession', () => {
-		if(vscode.debug.activeDebugSession !== undefined) {
+		if (vscode.debug.activeDebugSession !== undefined) {
 			vscode.window.showInformationMessage('Stop the current debug session before stopping a swarm debug session');
 			return;
 		}
@@ -169,7 +167,7 @@ export async function activate() {
 	vscode.commands.registerCommand('extension.swarm-debugging.toggleBreakpoints', (task: TreeTask) => {
 		currentlyActiveTask.setID(task.taskId);
 		if (currentlyActiveTask.getID() > 1) {
-				toggleBreakpoints(currentlyActiveTask);
+			toggleBreakpoints(currentlyActiveTask);
 		} else {
 			vscode.window.showInformationMessage('There is no task selected.');
 		}
@@ -259,10 +257,6 @@ export async function activate() {
 					let breakpointService = new BreakpointService(swarmBreakpoint);
 					let response = await breakpointService.create();
 
-					if (response) {
-						console.log('Breakpoint added!');
-					}
-
 				}
 
 				if (isFirstTime) {
@@ -276,9 +270,9 @@ export async function activate() {
 	});
 
 	vscode.debug.onDidStartDebugSession((e) => {
-		if(currentlyActiveSession.getID() > 0){
+		if (currentlyActiveSession.getID() > 0) {
 			vscode.window.showInformationMessage('Storing stepping information.');
-			if(vscode.debug.activeDebugSession){
+			if (vscode.debug.activeDebugSession) {
 				currentlyActiveSession.setVscodeSession(vscode.debug.activeDebugSession.id);
 				sessionService.setSession(currentlyActiveSession);
 				sessionService.updateSession();
@@ -289,7 +283,7 @@ export async function activate() {
 	});
 
 	vscode.debug.onDidTerminateDebugSession((e) => {
-		if(currentlyActiveSession.getID() > 0){
+		if (currentlyActiveSession.getID() > 0) {
 			vscode.commands.executeCommand('extension.swarm-debugging.stopSession');
 		}
 	});
@@ -308,8 +302,8 @@ function clearSet() {
 	currentlyActiveSession = new Session('', new Date(), '', '', '', currentlyActiveDeveloper, currentlyActiveTask);
 
 	sessionService = new SessionService(currentlyActiveSession);
- 	productService = new ProductService(currentlyActiveProduct);
- 	taskService = new TaskService(currentlyActiveTask);
+	productService = new ProductService(currentlyActiveProduct);
+	taskService = new TaskService(currentlyActiveTask);
 }
 
 function clearSession() {
@@ -377,4 +371,3 @@ async function toggleBreakpoints(task: Task) {
 
 	return true;
 }
-//

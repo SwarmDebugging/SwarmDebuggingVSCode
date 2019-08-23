@@ -4,8 +4,6 @@ import * as vscode from 'vscode';
 import { request } from 'graphql-request';
 import { SERVERURL } from '../../swarmAdapter';
 import { Developer } from '../objects/Developer';
-import { Product } from '../objects/Product';
-import { ProductService } from './productService';
 
 export class DeveloperService {
 
@@ -84,37 +82,4 @@ export class DeveloperService {
 		}
 	}
 
-	async login() {
-		if (this.developer) {
-			if (this.developer.isLoggedIn()) {
-				vscode.window.showInformationMessage('Logout before logging in');
-				return -4;
-			}
-		}
-
-		const account = await vscode.window.showQuickPick(['existing account', 'create an account'], { placeHolder: 'Do you have a Swarm Debugging account?' });
-		if (account === undefined) {
-			return -6;
-		}
-		if (account === 'create an account') {
-			//create a new account before login in
-			let res = await this.createSwarmAccount();
-			if (res < 1) {
-				return -5;
-			}
-		} else if (account === 'existing account') {
-			let res = await this.openSwarmAccount();
-			if (res < 1) {
-				return -3;
-			}
-		}
-
-		let productService = new ProductService(new Product('name', -1));
-
-		if (this.developer) {
-			return await productService.chooseProduct(this.developer);
-		}
-
-		return -7;
-	}
 }

@@ -39,7 +39,7 @@ export class DeveloperService {
 		if (data.developer !== null && this.developer) {
 			this.developer.setUsername(username);
 			this.developer.setID(data.developer.id);
-			vscode.window.showInformationMessage('logged in as ' + username);
+			vscode.window.showInformationMessage('Logged in as ' + username);
 			return 1;
 		} else {
 			vscode.window.showErrorMessage('Wrong Username/Username doesn\'t exist');

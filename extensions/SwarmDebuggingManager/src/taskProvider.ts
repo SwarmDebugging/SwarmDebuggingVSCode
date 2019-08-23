@@ -7,7 +7,7 @@ export class TaskProvider implements vscode.TreeDataProvider<TreeTask> {
 	private _onDidChangeTreeData: vscode.EventEmitter<TreeTask | undefined> = new vscode.EventEmitter<TreeTask | undefined>();
 	readonly onDidChangeTreeData: vscode.Event<TreeTask | undefined> = this._onDidChangeTreeData.event;
 
-	private productID: number; //manage -1, -2 productsID errors?
+	private productID: number;
 
 	constructor(productID: number) { this.productID = productID; }
 
@@ -54,7 +54,6 @@ async function getTasks(productId: number) {
 	};
 
 	var data = await request(SERVERURL, query, variables);
-	console.log(data);
 
 	let tasks: TreeTask[] = [];
 

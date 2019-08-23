@@ -11,13 +11,10 @@ import { Event } from './swarmClasses/objects/Event';
 import { EventService } from 'vs/workbench/contrib/debug/browser/swarmClasses/services/eventService';
 import { InvocationService } from 'vs/workbench/contrib/debug/browser/swarmClasses/services/invocationService';
 import { Invocation } from 'vs/workbench/contrib/debug/browser/swarmClasses/objects/Invocation';
-import { BreakpointService } from './swarmClasses/services/breakpointService';
-import { Breakpoint } from './swarmClasses/objects/Breakpoint';
-
 export const SERVERURL = 'http://localhost:8080/graphql?';
 
 export class SwarmAdapter {
-	// Control variables
+
 	private steppedIn: boolean = false;
 	private firstStackTrace: boolean = true;
 	private secondStackTrace: boolean = false;
@@ -25,7 +22,6 @@ export class SwarmAdapter {
 	private workspace: boolean = false;
 	private steppedOut: boolean = false;
 	private lastSteppedInMethod: Method;
-	private lastSteppedInType: Type;
 	private lastSteppedInEvent: Event;
 	private continued: boolean = false;
 	private steppedOver: boolean = false;
@@ -34,34 +30,24 @@ export class SwarmAdapter {
 	private internalFiles: Map<string, string> = new Map();
 	private firstVariables: boolean = true;
 	private secondVariables: boolean = false;
-	private swarmBreakpointService: BreakpointService;
-
-
-	// Data to persist
 	private vscodeSession: string;
 	private nextStackName: string;
 	private pastStackName: string;
 	private rootPathInvoking: string;
 	private eventKind: string;
-
 	private nextLine: number;
 	private nextPath: string;
 	private pastLine: number;
 	private pastPath: string;
-
 	private swarmSession: Session;
 	private swarmEvent: Event;
-
 	private swarmMethodInvoking: Method;
 	private swarmTypeInvoking: Type;
 	private swarmLastArtefact: Artefact;
-
 	private swarmMethodInvoked: Method;
 	private swarmTypeInvoked: Type;
 	private swarmNextArtefact: Artefact;
-
 	private swarmInvocation: Invocation;
-
 	private swarmSessionService: SessionService = new SessionService();
 	private swarmTypeService: TypeService = new TypeService();
 	private swarmMethodService: MethodService = new MethodService();
@@ -74,15 +60,14 @@ export class SwarmAdapter {
 
 		switch (response.command) {
 			case 'variables':
-				if (this.firstVariables) {
+				if (this.secondVariables) {
+					this.handleSecondVariables();
+				} else if (this.firstVariables) {
 					this.defineWorkspace(response);
 					this.firstVariables = false;
 					this.secondVariables = true;
-				} else if (this.secondVariables) {
-					this.handleSecondVariables();
 				}
 				break;
-			// The main events
 			case 'stepIn':
 				this.steppedIn = true;
 				this.eventKind = 'stepIn';
@@ -99,9 +84,8 @@ export class SwarmAdapter {
 				this.steppedOver = true;
 				this.eventKind = 'stepOver';
 				break;
-			//
 			case 'stackTrace':
-				if(this.thirdStackTrace){
+				if (this.thirdStackTrace) {
 					if (this.steppedIn || this.steppedOver || this.continued) {
 						this.handleSecondStackTrace(response);
 					}
@@ -152,7 +136,7 @@ export class SwarmAdapter {
 			}
 		}
 
-		if (this.pastStackName === "(anonymous function)" && typeof this.swarmLastArtefact.getSourceCode() === 'string') {
+		if (this.pastStackName === '(anonymous function)' && typeof this.swarmLastArtefact.getSourceCode() === 'string') {
 			this.pastStackName = this.swarmLastArtefact.getSourceCode().split('\n')[this.pastLine - 1];
 		}
 
@@ -160,8 +144,6 @@ export class SwarmAdapter {
 
 	handleSourceCommand(response: DebugProtocol.Response) {
 		if (this.fileInInternalsInvokingOpen || this.fileInInternalsInvokedOpen) {
-			//let artefact = response.body.content;
-			//this.swarmNextArtefactswarmNextArtefact = new Artefact(artefact);
 			if (this.fileInInternalsInvokingOpen) {
 				this.internalFiles.set(this.pastPath, response.body.content);
 				this.swarmLastArtefact = new Artefact(response.body.content);
@@ -194,7 +176,7 @@ export class SwarmAdapter {
 			}
 		}
 
-		if (this.nextStackName === "(anonymous function)" && typeof this.swarmNextArtefact.getSourceCode() === 'string') {
+		if (this.nextStackName === '(anonymous function)' && typeof this.swarmNextArtefact.getSourceCode() === 'string') {
 			this.nextStackName = this.swarmNextArtefact.getSourceCode().split('\n')[this.nextLine - 1];
 		}
 
@@ -298,7 +280,6 @@ export class SwarmAdapter {
 				this.swarmInvocationService.create();
 
 				this.lastSteppedInMethod = this.swarmMethodInvoked;
-				this.lastSteppedInType = this.swarmTypeInvoked;
 				this.lastSteppedInEvent = this.swarmEvent;
 
 				this.pastLine = this.nextLine;

@@ -18,26 +18,6 @@ export class ProductService {
         this.product = product;
     }
 
-    async chooseProduct(currentUser: Developer) {
-
-		const products: ProductQuickPickItem[] = await this.getProducts(currentUser);
-		if (products.length === 0) {
-			vscode.window.showInformationMessage('You are not working on any products, create a new product to start debugging!'); //would you like to create a new product?
-			return -2;
-		} else {
-			var chosenProduct = await vscode.window.showQuickPick(products, { placeHolder: 'Which Product would you like to work on?' });
-        }
-        if(chosenProduct !== undefined){
-		    if (chosenProduct.productId !== undefined && chosenProduct.label !== undefined) {
-                return new Product(chosenProduct.label, chosenProduct.productId);
-			    //return chosenProduct.productId; //label = ID
-            }
-        } else {
-			vscode.window.showInformationMessage('No product Chosen');
-			return -3;
-		}
-	}
-
     async getProducts(currentUser: Developer): Promise<vscode.QuickPickItem[]> {
         //Look into multiple graphql queries in one request
         const products: ProductQuickPickItem[] = [];
@@ -112,8 +92,9 @@ export class ProductService {
             productId: productData.productCreate.id
         };
 
+		let taskData;
         if (productData.productCreate.id) {
-            var taskData = await request(SERVERURL, taskQuery, taskVariables);
+            taskData = await request(SERVERURL, taskQuery, taskVariables);
         }
 
         let date = new Date().toISOString();
