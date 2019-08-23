@@ -220,7 +220,13 @@ export async function activate() {
 
 					let breakpoint = allBreakpointsActual[i] as vscode.SourceBreakpoint;
 
-					let swarmArtefact = new Artefact(fs.readFileSync(breakpoint.location.uri.fsPath, 'utf8'));
+					let swarmArtefact;
+					try{
+						swarmArtefact = new Artefact(fs.readFileSync(breakpoint.location.uri.fsPath, 'utf8'));
+					}catch(error){
+						vscode.window.showErrorMessage('Can not store breakpoints in internal nodes!');
+						return;
+					}
 
 					let fullname: string = '';
 					if (vscode.workspace.rootPath) {
