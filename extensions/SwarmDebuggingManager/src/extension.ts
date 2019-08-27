@@ -1,26 +1,27 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { TaskProvider, TreeTask } from './taskProvider';
+import { Artefact } from './objects/artefact';
+import { Breakpoint } from './objects/breakpoint';
 import { Developer } from './objects/developer';
 import { Product } from './objects/product';
-import { SessionService } from './services/sessionService';
-import { ProductService } from './services/productService';
-import { TaskService } from './services/taskService';
 import { Session } from './objects/session';
 import { Task } from './objects/task';
-import { BreakpointService } from './services/breakpointService';
-import { Artefact } from './objects/artefact';
 import { Type } from './objects/type';
-import { Breakpoint } from './objects/breakpoint';
+import { BreakpointService } from './services/breakpointService';
+import { ProductService } from './services/productService';
+import { SessionService } from './services/sessionService';
+import { TaskService } from './services/taskService';
 import { TypeService } from './services/typeService';
 
 export const SERVERURL = 'http://localhost:8080/graphql?';
 
+// The currently active objects
 var currentlyActiveProduct: Product = new Product(0, '');
 var currentlyActiveTask: Task = new Task('', '', '', currentlyActiveProduct);
 var currentlyActiveDeveloper: Developer = new Developer(0, '');
 var currentlyActiveSession: Session = new Session('', new Date(), '', '', '', currentlyActiveDeveloper, currentlyActiveTask);
-
+// The services objects that will comunicate to the server
 var sessionService = new SessionService(currentlyActiveSession);
 var productService = new ProductService(currentlyActiveProduct);
 var taskService: TaskService = new TaskService(currentlyActiveTask);
@@ -29,10 +30,13 @@ export async function activate() {
 
 	const taskProvider = new TaskProvider(-1); //add -1 case
 
+	// Associates the tasks from the database to the view
 	vscode.window.registerTreeDataProvider('taskView', taskProvider);
 
+	// Associates the refresh button to the refresh function of the presented tasks
 	vscode.commands.registerCommand('extension.swarm-debugging.refreshTasks', () => { taskProvider.refresh(); });
 
+	// Associates the login button to the login function
 	vscode.commands.registerCommand('extension.swarm-debugging.login', () => {
 		currentlyActiveDeveloper.login().then(res => {
 			if (res === undefined || typeof res === 'number') {
@@ -46,6 +50,7 @@ export async function activate() {
 		});
 	});
 
+	// Associates the logout button to the logout function
 	vscode.commands.registerCommand('extension.swarm-debugging.logout', () => {
 		if (vscode.debug.activeDebugSession !== undefined) {
 			return;
@@ -60,6 +65,7 @@ export async function activate() {
 		}
 	});
 
+	// Associates the product creation option to the creat product method
 	vscode.commands.registerCommand('extension.swarm-debugging.createProduct', async () => {
 		productService.createProduct(currentlyActiveDeveloper).then((res) => {
 			if (typeof res === 'number') {
@@ -72,6 +78,7 @@ export async function activate() {
 		});
 	});
 
+	// Associates the task creation option to the creat task method
 	vscode.commands.registerCommand('extension.swarm-debugging.createTask', () => {
 		taskService.createTask(currentlyActiveDeveloper, currentlyActiveProduct).then((res: number) => {
 			if (res > 0) {
@@ -82,6 +89,7 @@ export async function activate() {
 		});
 	});
 
+	// Associates the session start option to the according behavior
 	vscode.commands.registerCommand('extension.swarm-debugging.startSession', async (task: TreeTask) => {
 
 		if (vscode.debug.activeDebugSession) {
@@ -115,6 +123,7 @@ export async function activate() {
 		});
 	});
 
+	// Associates the session stop option to the according behavior
 	vscode.commands.registerCommand('extension.swarm-debugging.stopSession', () => {
 		if (vscode.debug.activeDebugSession !== undefined) {
 			vscode.window.showInformationMessage('Stop the current debug session before stopping a swarm debug session');
@@ -128,6 +137,7 @@ export async function activate() {
 		});
 	});
 
+	// Associates the task done option to the end task method
 	vscode.commands.registerCommand('extension.swarm-debugging.endTask', (task: TreeTask) => {
 		if (currentlyActiveSession.getID() < 1) {
 			taskService.endTask(task.taskId).then(() => {
@@ -136,6 +146,7 @@ export async function activate() {
 		}
 	});
 
+	// Associates the product choosing to the according behavior
 	vscode.commands.registerCommand('extension.swarm-debugging.chooseProduct', () => {
 		if (!currentlyActiveDeveloper.isLoggedIn()) {
 			vscode.window.showInformationMessage('You must be logged in to choose a product');
@@ -154,6 +165,7 @@ export async function activate() {
 		}
 	});
 
+	// Associates the rename task option to the update task title method
 	vscode.commands.registerCommand('extension.swarm-debugging.updateTaskTitle', (task: TreeTask) => {
 		if (currentlyActiveSession.getID() < 1) {
 			taskService.updateTaskTitle(task.taskId).then((res: number) => {
@@ -164,6 +176,7 @@ export async function activate() {
 		}
 	});
 
+	// Associates the toggle breakpoints action to the according behavior
 	vscode.commands.registerCommand('extension.swarm-debugging.toggleBreakpoints', (task: TreeTask) => {
 		currentlyActiveTask.setID(task.taskId);
 		if (currentlyActiveTask.getID() > 1) {
@@ -173,10 +186,17 @@ export async function activate() {
 		}
 	});
 
+	/**
+	 * Those variables are used in order to verify what breakpoints are in fact
+	 * news when the onDidChangeBreakpoints event is triggered, also the isFirstTime
+	 * is needed in order to not store breakpoints toggle before the Swarm Debugging
+	 * Session was started
+	 */
 	var isFirstTime = true;
 	var allBreakpointsActual: any;
 	var allBreakpointsPast: any;
 
+	// When the onDidChangeBreakpoints event is triggered behavior
 	vscode.debug.onDidChangeBreakpoints(async (event: vscode.BreakpointsChangeEvent) => {
 
 		if (currentlyActiveSession.getID() > 0) {
@@ -194,11 +214,13 @@ export async function activate() {
 
 			let shouldCreateBreakpoint: boolean;
 
-			// The logic is simple, compare all the past and present breakpoints,
-			// find which ones are new and them add them to the database
-			// There are some special treatment for the firstime, because in the
-			// first time the past state is equivalent to the breakpoints from
-			// the database(Breakpoint not vscode.Breakpoint)
+			/**
+			 * The logic is simple, compare all the past and present breakpoints,
+			 * find which ones are new and them add them to the database
+			 * There are some special treatment for the firstime, because in the
+			 * first time the past state is equivalent to the breakpoints from
+			 * the database(Breakpoint not vscode.Breakpoint)
+			 */
 			for (var i = 0; i < allBreakpointsActual.length; i++) {
 				shouldCreateBreakpoint = true;
 				for (var j = 0; j < allBreakpointsPast.length; j++) {
@@ -221,9 +243,9 @@ export async function activate() {
 					let breakpoint = allBreakpointsActual[i] as vscode.SourceBreakpoint;
 
 					let swarmArtefact;
-					try{
+					try {
 						swarmArtefact = new Artefact(fs.readFileSync(breakpoint.location.uri.fsPath, 'utf8'));
-					}catch(error){
+					} catch (error) {
 						vscode.window.showErrorMessage('Can not store breakpoints in internal nodes!');
 						return;
 					}
@@ -275,6 +297,12 @@ export async function activate() {
 
 	});
 
+	/**
+	 * When a VS Code debug session start event is triggered behavior
+	 * If there is a Swarm Debugging Session active, it will store
+	 * stepping information and it will also fill the active session
+	 * object
+	 */
 	vscode.debug.onDidStartDebugSession((e) => {
 		if (currentlyActiveSession.getID() > 0) {
 			vscode.window.showInformationMessage('Storing stepping information.');
@@ -288,6 +316,11 @@ export async function activate() {
 		}
 	});
 
+	/**
+ 	 * When a VS Code debug session end event is triggered behavior
+ 	 * It will call a already existing command to stop the current
+	 * Swarm Debugging Session
+ 	 */
 	vscode.debug.onDidTerminateDebugSession((e) => {
 		if (currentlyActiveSession.getID() > 0) {
 			vscode.commands.executeCommand('extension.swarm-debugging.stopSession');
@@ -296,11 +329,12 @@ export async function activate() {
 
 }
 
+// On extensions deactivation it logouts the current developer
 export function deactivate() {
-	//stop currently active sessions on logout
 	currentlyActiveDeveloper.logout();
 }
 
+// Funtion to clear all the active objects and services, it is used in the logout
 function clearSet() {
 	currentlyActiveProduct = new Product(0, '');
 	currentlyActiveTask = new Task('', '', '', currentlyActiveProduct);
@@ -312,11 +346,13 @@ function clearSet() {
 	taskService = new TaskService(currentlyActiveTask);
 }
 
+// Funtion to clear session object and service, it is used in the session stopping
 function clearSession() {
 	currentlyActiveSession = new Session('', new Date(), '', '', '', currentlyActiveDeveloper, currentlyActiveTask);
 	sessionService.setSession(currentlyActiveSession);
 }
 
+// Transforms a standard VS Code path to a Type name
 function fromPathToTypeName(path: string) {
 
 	let splittedPath = path.split('/');
@@ -325,6 +361,7 @@ function fromPathToTypeName(path: string) {
 
 }
 
+// Transforms a standard VS Code path to a Type fullname, it requires the workspace path too
 function getTypeFullname(rootPath: string, filePath: string) {
 
 	let splittedRootPath = rootPath.split('/');
@@ -343,6 +380,10 @@ function getTypeFullname(rootPath: string, filePath: string) {
 
 }
 
+/**
+ * Toggle all the breakpoints from a not complete task which the lines
+ * still the same and at the same place on the code
+ */
 async function toggleBreakpoints(task: Task) {
 
 	let breakpointService = new BreakpointService();
