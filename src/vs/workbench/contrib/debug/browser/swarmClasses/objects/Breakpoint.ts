@@ -1,3 +1,7 @@
+/**
+ * Swarm Debugging Project Addition
+ */
+
 // tslint:disable-next-line: import-patterns
 import * as vs from 'vscode';
 // tslint:disable-next-line: import-patterns

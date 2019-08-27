@@ -1,31 +1,35 @@
+/**
+ * Swarm Debugging Project Addition
+ */
+
 // tslint:disable-next-line: import-patterns
 import * as vscode from 'vscode';
 
 export class Product {
 
-    private id: number = -1;
-    private name: string = '';
+	private id: number = -1;
+	private name: string = '';
 
-    constructor(name: string, id: number) {
-        this.name = name;
-        this.id = id;
-    }
+	constructor(name: string, id: number) {
+		this.name = name;
+		this.id = id;
+	}
 
-    getID() {
-        return this.id;
-    }
+	getID() {
+		return this.id;
+	}
 
-    setID(id: number) {
-        this.id = id;
-    }
+	setID(id: number) {
+		this.id = id;
+	}
 
-    getName() {
-        return this.name;
-    }
+	getName() {
+		return this.name;
+	}
 
-    setName(name: string) {
-        this.name = name;
-    }
+	setName(name: string) {
+		this.name = name;
+	}
 
 }
 

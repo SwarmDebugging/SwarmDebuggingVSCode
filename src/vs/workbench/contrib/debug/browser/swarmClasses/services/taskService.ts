@@ -1,96 +1,100 @@
+/**
+ * Swarm Debugging Project Addition
+ */
+
 // tslint:disable-next-line: import-patterns
 import * as vscode from 'vscode';
 // tslint:disable-next-line: import-patterns
 import { request } from 'graphql-request';
 import { SERVERURL } from '../../swarmAdapter';
-import { Task } from '../objects/Task';
 import { Developer } from '../objects/Developer';
 import { Product } from '../objects/Product';
+import { Task } from '../objects/Task';
 
 export class TaskService {
 
-    task: Task | undefined;
+	task: Task | undefined;
 
-    constructor(task?: Task) {
-        this.task = task;
-    }
+	constructor(task?: Task) {
+		this.task = task;
+	}
 
-    setTask(task: Task) {
-        this.task = task;
-    }
+	setTask(task: Task) {
+		this.task = task;
+	}
 
-    async updateTaskTitle(taskId: number): Promise<number> {
+	async updateTaskTitle(taskId: number): Promise<number> {
 
-        const title = await vscode.window.showInputBox({ prompt: 'Enter new title for selected task' });
+		const title = await vscode.window.showInputBox({ prompt: 'Enter new title for selected task' });
 
-        if (title === undefined) {
-            return -1;
-        } else if (!title) {
-            vscode.window.showInformationMessage('new title must be valid');
-            return await this.updateTaskTitle(taskId);
-        }
+		if (title === undefined) {
+			return -1;
+		} else if (!title) {
+			vscode.window.showInformationMessage('new title must be valid');
+			return await this.updateTaskTitle(taskId);
+		}
 
-        const query = `mutation taskUpdateTitle($taskId: Long!, $title: String!){
+		const query = `mutation taskUpdateTitle($taskId: Long!, $title: String!){
             taskUpdate(taskId: $taskId, title: $title){
                 id
             }
         }`;
 
-        const variables = {
-            taskId: taskId,
-            title: title
-        };
+		const variables = {
+			taskId: taskId,
+			title: title
+		};
 
-        let data = await request(SERVERURL, query, variables);
-        if(data){
-            return 1;
-        }
-        return -1;
-    }
+		let data = await request(SERVERURL, query, variables);
+		if (data) {
+			return 1;
+		}
+		return -1;
+	}
 
-    async endTask(taskId: number) {
+	async endTask(taskId: number) {
 
-        //can a developer end a task while in a debugging session?
+		//can a developer end a task while in a debugging session?
 
-        const query = `mutation taskDone($taskId: Long!) {
+		const query = `mutation taskDone($taskId: Long!) {
             taskDone(taskId: $taskId){
                 done
             }
         }`;
 
-        const variables = {
-            taskId: taskId
-        };
+		const variables = {
+			taskId: taskId
+		};
 
-        let data = await request(SERVERURL, query, variables);
+		let data = await request(SERVERURL, query, variables);
 
-        if (data.taskDone.done === true) {
-            vscode.window.showInformationMessage('Task marked as done');
-            return taskId;
-        }
-        return -1;
-    }
+		if (data.taskDone.done === true) {
+			vscode.window.showInformationMessage('Task marked as done');
+			return taskId;
+		}
+		return -1;
+	}
 
-    async createTask(currentUser: Developer, currentProduct: Product) {
+	async createTask(currentUser: Developer, currentProduct: Product) {
 
-        if (currentProduct.getID() < 1) {
-            vscode.window.showInformationMessage('No product selected');
-            return -1;
-        } else if (!currentUser.isLoggedIn()) {
-            vscode.window.showInformationMessage('You must be logged in to create a new task');
-            return -2;
-        }
+		if (currentProduct.getID() < 1) {
+			vscode.window.showInformationMessage('No product selected');
+			return -1;
+		} else if (!currentUser.isLoggedIn()) {
+			vscode.window.showInformationMessage('You must be logged in to create a new task');
+			return -2;
+		}
 
-        let taskName: string | undefined = '';
-        while(taskName === '') {
-            taskName = await vscode.window.showInputBox({ prompt: 'Enter the name of the new task' });
-        }
+		let taskName: string | undefined = '';
+		while (taskName === '') {
+			taskName = await vscode.window.showInputBox({ prompt: 'Enter the name of the new task' });
+		}
 
-        if (taskName === undefined) {
-            return -3;
-        }
+		if (taskName === undefined) {
+			return -3;
+		}
 
-        const query = `mutation taskCreate($taskName: String!, $productId: Long!) {
+		const query = `mutation taskCreate($taskName: String!, $productId: Long!) {
             taskCreate(task: {
                 title: $taskName
                 done: false
@@ -102,16 +106,16 @@ export class TaskService {
             }
         }`;
 
-        const variables = {
-            taskName: taskName,
-            productId: currentProduct.getID()
-        };
+		const variables = {
+			taskName: taskName,
+			productId: currentProduct.getID()
+		};
 
-        let data = await request(SERVERURL, query, variables);
+		let data = await request(SERVERURL, query, variables);
 
-        if(data.taskCreate.id){
-            return 1;
-        }
-        return -4;
-    }
+		if (data.taskCreate.id) {
+			return 1;
+		}
+		return -4;
+	}
 }

@@ -1,3 +1,7 @@
+/**
+ * Swarm Debugging Project Addition
+ */
+
 import { Type } from './Type';
 
 export class Method {

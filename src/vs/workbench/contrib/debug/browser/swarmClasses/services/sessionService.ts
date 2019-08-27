@@ -1,9 +1,13 @@
+/**
+ * Swarm Debugging Project Addition
+ */
+
 // tslint:disable-next-line: import-patterns
 import { request } from 'graphql-request';
 import { SERVERURL } from '../../swarmAdapter';
-import { Session } from '../objects/Session';
-import { Product } from '../objects/Product';
 import { Developer } from '../objects/Developer';
+import { Product } from '../objects/Product';
+import { Session } from '../objects/Session';
 import { Task } from '../objects/Task';
 
 export class SessionService {

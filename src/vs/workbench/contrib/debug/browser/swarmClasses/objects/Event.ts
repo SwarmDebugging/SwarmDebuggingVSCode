@@ -1,3 +1,7 @@
+/**
+ * Swarm Debugging Project Addition
+ */
+
 import { Method } from '../objects/Method';
 import { Session } from '../objects/Session';
 

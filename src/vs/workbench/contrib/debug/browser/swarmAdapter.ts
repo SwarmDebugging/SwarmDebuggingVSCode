@@ -1,16 +1,21 @@
+/**
+ * Swarm Debugging Project Addition
+ */
+
 // tslint:disable-next-line: import-patterns
 import * as fs from 'fs';
-import { Session } from './swarmClasses/objects/Session';
 import { Artefact } from './swarmClasses/objects/Artefact';
+import { Event } from './swarmClasses/objects/Event';
+import { Invocation } from './swarmClasses/objects/Invocation';
+import { Method } from './swarmClasses/objects/Method';
+import { Session } from './swarmClasses/objects/Session';
 import { Type } from './swarmClasses/objects/Type';
+import { EventService } from './swarmClasses/services/eventService';
+import { InvocationService } from './swarmClasses/services/invocationService';
+import { MethodService } from './swarmClasses/services/methodService';
 import { SessionService } from './swarmClasses/services/sessionService';
 import { TypeService } from './swarmClasses/services/typeService';
-import { MethodService } from './swarmClasses/services/methodService';
-import { Method } from './swarmClasses/objects/Method';
-import { Event } from './swarmClasses/objects/Event';
-import { EventService } from 'vs/workbench/contrib/debug/browser/swarmClasses/services/eventService';
-import { InvocationService } from 'vs/workbench/contrib/debug/browser/swarmClasses/services/invocationService';
-import { Invocation } from 'vs/workbench/contrib/debug/browser/swarmClasses/objects/Invocation';
+
 export const SERVERURL = 'http://localhost:8080/graphql?';
 
 export class SwarmAdapter {
@@ -39,26 +44,57 @@ export class SwarmAdapter {
 	private nextPath: string;
 	private pastLine: number;
 	private pastPath: string;
-	private swarmSession: Session;
-	private swarmEvent: Event;
-	private swarmMethodInvoking: Method;
-	private swarmTypeInvoking: Type;
+
+	// Objects that will hold the information before send them to the server
 	private swarmLastArtefact: Artefact;
-	private swarmMethodInvoked: Method;
-	private swarmTypeInvoked: Type;
 	private swarmNextArtefact: Artefact;
+	private swarmEvent: Event;
 	private swarmInvocation: Invocation;
-	private swarmSessionService: SessionService = new SessionService();
-	private swarmTypeService: TypeService = new TypeService();
+	private swarmMethodInvoking: Method;
+	private swarmMethodInvoked: Method;
+	private swarmSession: Session;
+	private swarmTypeInvoking: Type;
+	private swarmTypeInvoked: Type;
+
+	// Services objects that communicate with the GraphQL server
 	private swarmMethodService: MethodService = new MethodService();
 	private swarmEventService: EventService = new EventService();
 	private swarmInvocationService: InvocationService = new InvocationService();
+	private swarmSessionService: SessionService = new SessionService();
+	private swarmTypeService: TypeService = new TypeService();
 
+	// Empty constructor
 	constructor() { }
 
+	/**
+	 * This function is used for this adpter to receive the
+	 * current VS Code debug session id
+	 */
+	setSession(vscodeSessionId: string) {
+		this.vscodeSession = vscodeSessionId;
+	}
+
+	/**
+	 * The main function where the response verification will happen
+	 * and when the objects are ready, this function will also call
+	 * the services to communicate to the server and persist the data
+	 */
 	async tryPersist(response: DebugProtocol.Response) {
 
+		/**
+		 * Here it is verified what command the DebugAdapter response
+		 * contains, according to the response that is a behavior that
+		 * needs to be done
+		 */
 		switch (response.command) {
+			/**
+			 * The variables command appears two times, one only the first
+			 * time the debug session starts and it will contain information
+			 * about the current workspace
+			 * The second variables appear after the completion of a stepping
+			 * event, so this command was choosen to be the right moment to
+			 * persist the information on the server
+			 */
 			case 'variables':
 				if (this.secondVariables) {
 					this.handleSecondVariables();
@@ -68,6 +104,13 @@ export class SwarmAdapter {
 					this.secondVariables = true;
 				}
 				break;
+			/**
+			 * The Swarm Debugging will store information about 4
+			 * debugging events besides the breakpoints, and they are the
+			 * ones below
+			 * When these events are sent as command it is possible to
+			 * store the event kind
+			 */
 			case 'stepIn':
 				this.steppedIn = true;
 				this.eventKind = 'stepIn';
@@ -84,6 +127,17 @@ export class SwarmAdapter {
 				this.steppedOver = true;
 				this.eventKind = 'stepOver';
 				break;
+			/**
+			 * The stackTrace command is the main one since it will tell us
+			 * where the debugger is at the moment and where it will go then
+			 * There are four stack traces that are going to be received but
+			 * it is needed the information about the first one that is sent
+			 * when the debug session begins and the first one that comes
+			 * after a debug event is sent
+			 * The first stackTrace will give us a first state of where the
+			 * debug session started, and the second one (in fact the third)
+			 * will tell us which line/file we will be after some event happens
+			 */
 			case 'stackTrace':
 				if (this.thirdStackTrace) {
 					if (this.steppedIn || this.steppedOver || this.continued) {
@@ -103,9 +157,19 @@ export class SwarmAdapter {
 					this.secondStackTrace = true;
 				}
 				break;
+			/**
+			 * This command tracks the oppened files during the debug session
+			 * and it is used to store information about internals files which
+			 * path is sent differently
+			 */
 			case 'source':
 				this.handleSourceCommand(response);
 				break;
+			/**
+			 * This command is sent when the stop method is performed or the
+			 * debbuger reaches the end of the debug session, so it will clean
+			 * all the information in this Swarm Adapter in order to avoid mistakes
+			 */
 			case 'disconnect':
 				this.clearConditions();
 				break;
@@ -113,6 +177,11 @@ export class SwarmAdapter {
 
 	}
 
+	/**
+	 * Given a specfic Debug Adpapter response, this function
+	 * stores the information of the current workspace path to
+	 * the Swarm Adapter object
+	 */
 	defineWorkspace(response: DebugProtocol.Response) {
 		if (this.workspace === false) {
 			this.rootPathInvoking = response.body.variables[1].value.slice(response.body.variables[1].value, response.body.variables[1].value.length - 1);
@@ -120,6 +189,11 @@ export class SwarmAdapter {
 		}
 	}
 
+	/**
+	 * It stores the information that is receveid during the first
+	 * stackTrace, it will be the starting point for the past
+	 * state
+	 */
 	async handleFirstStackTrace(response: DebugProtocol.Response) {
 		this.pastLine = response.body.stackFrames[0].line;
 		this.pastPath = response.body.stackFrames[0].source.path;
@@ -155,10 +229,11 @@ export class SwarmAdapter {
 		}
 	}
 
-	setSession(vscodeSessionId: string) {
-		this.vscodeSession = vscodeSessionId;
-	}
-
+	/**
+	 * It stores the information that is received during the third
+	 * stackTrace, it will be resposible to track the next state of
+	 * the debugger
+	 */
 	async handleSecondStackTrace(response: DebugProtocol.Response) {
 
 		this.nextLine = response.body.stackFrames[0].line;
@@ -182,6 +257,9 @@ export class SwarmAdapter {
 
 	}
 
+	/**
+	 * Clear the varibles used in ths adapter
+	 */
 	clearConditions() {
 		this.steppedIn = false;
 		this.secondStackTrace = false;
@@ -194,6 +272,10 @@ export class SwarmAdapter {
 		this.secondVariables = false;
 	}
 
+	/**
+	 * It will organize the collected data and send it to the server
+	 * through the service objects accordingly to the debug event kind
+	 */
 	async handleSecondVariables() {
 		if (this.steppedIn) {
 			let result = await this.swarmSessionService.getByVscodeId(
@@ -279,9 +361,14 @@ export class SwarmAdapter {
 				this.swarmInvocationService.setInvocation(this.swarmInvocation);
 				this.swarmInvocationService.create();
 
+				/**
+				 * Varibles stored in order to correctly persist
+				 * a stepOut event that happens after a stepIn
+				 */
 				this.lastSteppedInMethod = this.swarmMethodInvoked;
 				this.lastSteppedInEvent = this.swarmEvent;
 
+				// Past and next state update
 				this.pastLine = this.nextLine;
 				this.pastPath = this.nextPath;
 				this.pastStackName = this.nextStackName;
@@ -298,6 +385,7 @@ export class SwarmAdapter {
 				this.eventKind));
 			await this.swarmEventService.create();
 
+			// Past and next state update
 			this.pastLine = this.lastSteppedInEvent.getLineNumber();
 			this.pastPath = this.lastSteppedInMethod.getType().getFullPath();
 			this.pastStackName = this.lastSteppedInMethod.getName();
@@ -357,6 +445,7 @@ export class SwarmAdapter {
 
 			}
 
+			// Past and next state update
 			this.pastLine = this.nextLine;
 			this.pastPath = this.nextPath;
 			this.pastStackName = this.nextStackName;
@@ -414,6 +503,7 @@ export class SwarmAdapter {
 				this.swarmEventService.setEvent(this.swarmEvent);
 				await this.swarmEventService.create();
 
+				// Past and next state update
 				this.pastLine = this.nextLine;
 				this.pastPath = this.nextPath;
 				this.pastStackName = this.nextStackName;
@@ -429,6 +519,7 @@ export class SwarmAdapter {
 
 }
 
+// Transforms a standard VS Code path to a Type name
 function fromPathToTypeName(path: string) {
 
 	let splittedPath = path.split('/');
@@ -437,6 +528,7 @@ function fromPathToTypeName(path: string) {
 
 }
 
+// Transforms a standard VS Code path to a Type fullname, it requires the workspace path too
 function getTypeFullname(rootPath: string, filePath: string) {
 
 	if (filePath.split('>').length > 1) {

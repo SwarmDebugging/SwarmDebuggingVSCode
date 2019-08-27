@@ -1,3 +1,7 @@
+/**
+ * Swarm Debugging Project Addition
+ */
+
 export class Artefact {
 
     private id: number = -1;
