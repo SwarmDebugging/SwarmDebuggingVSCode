@@ -4,6 +4,8 @@ This version of visual studio adds support for collecting debugging data of deve
 
 This version of vscode also includes the Swarm Debugging Manager extension to manage Products and debugging tasks of developers: [Swarm Debugging Manager](https://github.com/SwarmDebugging/SwarmDebuggingManager). 
 
+All lines and files added from the original source can be easilly found by searching for "Swarm Debugging Project Addition".
+
 ## Using and Contributing
 
 Follow the same steps mentioned on the [Visual Studio Code GitHub Repository](https://github.com/Microsoft/vscode/wiki/How-to-Contribute).
