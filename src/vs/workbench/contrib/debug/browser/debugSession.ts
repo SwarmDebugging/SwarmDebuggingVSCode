@@ -207,7 +207,11 @@ export class DebugSession implements IDebugSession {
 			// __sessionID only used for EH debugging (but we add it always for now...)
 			config.__sessionId = this.getId();
 
-			// SwarmDebug
+			/**
+			 * Swarm Debugging Project Addition
+			 * This method is used in order to communicate the
+			 * active VS Code active debug session to the Swarm Adapter
+			 */
 			this.raw.setSwarmSession(this.id);
 
 			return this.raw.launchOrAttach(config).then(result => {

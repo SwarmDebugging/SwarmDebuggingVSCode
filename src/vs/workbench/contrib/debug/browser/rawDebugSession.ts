@@ -21,6 +21,7 @@ import { ParsedArgs } from 'vs/platform/environment/common/environment';
 import { IWindowsService } from 'vs/platform/windows/common/windows';
 import { URI } from 'vs/base/common/uri';
 import { IProcessEnvironment } from 'vs/base/common/platform';
+// Swarm Debugging Project Addition
 import { SwarmAdapter } from './swarmAdapter';
 
 /**
@@ -46,9 +47,7 @@ export class RawDebugSession {
 	private _readyForBreakpoints = false;
 	private _capabilities: DebugProtocol.Capabilities;
 
-	//swarmdebug
-	//private steppedIn = false;
-	//private lastFunction: string;
+	// Swarm Debugging Project Addition
 	private swarmAdapter: SwarmAdapter = new SwarmAdapter();
 
 	// shutdown
@@ -172,7 +171,11 @@ export class RawDebugSession {
 		this.debugAdapter.onRequest(request => this.dispatchRequest(request, dbgr));
 	}
 
-	// swarmdebug
+	/**
+	 * Swarm Debugging Project Addition
+	 * This method is used in order to communicate the
+	 * active VS Code active debug session to the Swarm Adapter
+	 */
 	setSwarmSession(id: string) {
 		this.swarmAdapter.setSession(id);
 	}
@@ -320,8 +323,6 @@ export class RawDebugSession {
 		args: DebugProtocol.StepInArguments
 	): Promise<DebugProtocol.StepInResponse> {
 		return this.send('stepIn', args).then(response => {
-			//swarmdebug: Whenever there's a stepin, it need to find the current session then find the callstack to
-			//get the info to send to the server
 			this.fireSimulatedContinuedEvent(args.threadId);
 			return response;
 		});
@@ -741,24 +742,17 @@ export class RawDebugSession {
 				args,
 				(response: R) => {
 					if (response.success) {
-						/*
-					//swarmdebug: the response.body contains the stackframes which contain the info
-					//sessionid si in args as well as command.
-					if(response.command === 'stepIn') {
-						this.steppedIn = true;
-					}
-					if(response.command === 'stackTrace' && this.steppedIn) {
-						let lastFunction = response.body.stackFrames[0].name;
-						this.steppedIn = false;
-					}
-					*/
 
+						/**
+						 * Swarm Debugging Project Addition
+						 * This is the function that will constantly analyze the
+						 * responde from the DebugAdapter and stores the needed
+						 * information
+						 */
 						this.swarmAdapter.tryPersist(response);
 
 						completeDispatch(response);
-						//When there's a stepIn command sent, the response doesn't contain much information, but on of the next command's
-						//name is 'stackTrace' and it contains info on the next(I think) frame.
-						//I think we need to keep a variable to keep the last called function for the invocation table in swarmserver.
+
 					} else {
 						errorDispatch(response);
 					}
